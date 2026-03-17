@@ -9,7 +9,7 @@
 
 ---
 
-## Phase 2 — Stats
+## Phase 2 — Stats ✅
 - Top artists (by total listening time)
 - Top tracks (by total listening time)
 - Total listening time (minutes / hours)
@@ -17,7 +17,7 @@
 
 ---
 
-## Phase 3 — Time
+## Phase 3 — Time ✅
 - Monthly listening stats (plays + minutes)
 - Yearly summary
 - (Optional) hour-of-day listening patterns
