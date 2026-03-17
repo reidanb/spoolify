@@ -22,18 +22,25 @@ import sys
 import os
 from db import get_connection, init_db
 from importer import import_file
-from queries import print_top_artists
+from queries import print_top_artists, print_stats
 
 def main():
     if len(sys.argv) < 2:
         print(f"Usage: {os.path.basename(sys.argv[0])} <spotify_json_file> [--top-artists]\n       or: {os.path.basename(sys.argv[0])} --top-artists")
         sys.exit(1)
 
-    # If only --top-artists is supplied
+
+    # If only --top-artists or --stats is supplied
     if sys.argv[1] == "--top-artists":
         conn = get_connection()
         init_db(conn)
         print_top_artists(conn)
+        conn.close()
+        return
+    if sys.argv[1] == "--stats":
+        conn = get_connection()
+        init_db(conn)
+        print_stats(conn)
         conn.close()
         return
 
@@ -57,8 +64,11 @@ def main():
     else:
         import_file(conn, path)
 
-    if len(sys.argv) > 2 and sys.argv[2] == "--top-artists":
-        print_top_artists(conn)
+    if len(sys.argv) > 2:
+        if sys.argv[2] == "--top-artists":
+            print_top_artists(conn)
+        elif sys.argv[2] == "--stats":
+            print_stats(conn)
     conn.close()
 
 if __name__ == "__main__":
