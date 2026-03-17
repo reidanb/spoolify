@@ -38,12 +38,25 @@ def main():
         return
 
     path = sys.argv[1]
-    if not os.path.isfile(path):
-        print(f"File not found: {path}")
+    if not (os.path.isfile(path) or os.path.isdir(path)):
+        print(f"File or directory not found: {path}")
         sys.exit(1)
+
     conn = get_connection()
     init_db(conn)
-    import_file(conn, path)
+
+    if os.path.isdir(path):
+        json_files = [os.path.join(path, f) for f in os.listdir(path) if f.lower().endswith('.json')]
+        if not json_files:
+            print(f"No JSON files found in directory: {path}")
+            conn.close()
+            sys.exit(1)
+        for json_file in json_files:
+            print(f"Importing {json_file}...")
+            import_file(conn, json_file)
+    else:
+        import_file(conn, path)
+
     if len(sys.argv) > 2 and sys.argv[2] == "--top-artists":
         print_top_artists(conn)
     conn.close()
