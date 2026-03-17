@@ -26,8 +26,17 @@ from queries import print_top_artists
 
 def main():
     if len(sys.argv) < 2:
-        print(f"Usage: {os.path.basename(sys.argv[0])} <spotify_json_file> [--top-artists]")
+        print(f"Usage: {os.path.basename(sys.argv[0])} <spotify_json_file> [--top-artists]\n       or: {os.path.basename(sys.argv[0])} --top-artists")
         sys.exit(1)
+
+    # If only --top-artists is supplied
+    if sys.argv[1] == "--top-artists":
+        conn = get_connection()
+        init_db(conn)
+        print_top_artists(conn)
+        conn.close()
+        return
+
     path = sys.argv[1]
     if not os.path.isfile(path):
         print(f"File not found: {path}")
