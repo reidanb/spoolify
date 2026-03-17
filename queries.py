@@ -44,6 +44,45 @@ def print_stats(conn):
 
     print(f"\nTotal listening time: {total_minutes} minutes ({total_hours:.1f} hours)")
     print(f"Total play count: {play_count}")
+
+    # Monthly listening stats (plays + minutes)
+    print("\nMonthly Listening Stats:")
+    cur.execute('''
+        SELECT substr(ts, 1, 7) AS month, COUNT(*), SUM(ms_played) / 60000 AS minutes
+        FROM plays
+        WHERE ts IS NOT NULL
+        GROUP BY month
+        ORDER BY month
+    ''')
+    monthly = cur.fetchall()
+    for month, count, minutes in monthly:
+        print(f"{month}: {count} plays, {int(minutes)} minutes")
+
+    # Yearly summary
+    print("\nYearly Listening Summary:")
+    cur.execute('''
+        SELECT substr(ts, 1, 4) AS year, COUNT(*), SUM(ms_played) / 60000 AS minutes
+        FROM plays
+        WHERE ts IS NOT NULL
+        GROUP BY year
+        ORDER BY year
+    ''')
+    yearly = cur.fetchall()
+    for year, count, minutes in yearly:
+        print(f"{year}: {count} plays, {int(minutes)} minutes")
+
+    # Hour-of-day listening patterns (optional)
+    print("\nHour-of-Day Listening Patterns:")
+    cur.execute('''
+        SELECT CAST(strftime('%H', ts) AS INTEGER) AS hour, COUNT(*), SUM(ms_played) / 60000 AS minutes
+        FROM plays
+        WHERE ts IS NOT NULL
+        GROUP BY hour
+        ORDER BY hour
+    ''')
+    hourly = cur.fetchall()
+    for hour, count, minutes in hourly:
+        print(f"{hour:02d}:00 - {hour:02d}:59 — {count} plays, {int(minutes)} minutes")
 def print_top_artists(conn):
     """
     Queries the plays table, groups by artist_name, sums ms_played (converted to minutes),
