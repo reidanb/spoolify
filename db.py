@@ -1,6 +1,13 @@
-import sqlite3
 
-DB_FILE = "spoolify.db"
+import sqlite3
+import os
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass  # dotenv is optional, fallback to os.environ only
+
+DB_FILE = os.environ.get("SPOOLIFY_DB_FILE", "spoolify.db")
 
 def get_connection():
     """Returns a new SQLite connection to the database file."""
