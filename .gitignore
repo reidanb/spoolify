@@ -25,5 +25,10 @@ pip-wheel-metadata/
 # Logs
 *.log
 
+# Test output
+tests/perf_log.csv
+tests/stdout.log
+tests/stderr.log
+
 # Jupyter Notebook checkpoints
 .ipynb_checkpoints/
