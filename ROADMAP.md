@@ -1,4 +1,4 @@
-# Spoolify Roadmap
+# Spoolify Roadmap (Refined)
 
 ## Phase 1 — Importer ✅
 - Import Spotify Extended Streaming History JSON
@@ -20,24 +20,48 @@
 ## Phase 3 — Time ✅
 - Monthly listening stats (plays + minutes)
 - Yearly summary
-- (Optional) hour-of-day listening patterns
+- Hour-of-day listening patterns
+
+---
+
+## Phase 3.5 — Analysis & Audit 🔥
+- Peak listening hour / month / year
+- Listening behaviour profile (e.g. afternoon vs night listener)
+- Trend analysis (year-over-year growth/decline)
+- Data validation:
+  - duplicate detection
+  - zero-minute or malformed plays
+  - gaps in timeline (missing months/years)
+- Import summary:
+  - files processed
+  - rows ingested
+  - duplicates skipped
+- JSON export support for all outputs
 
 ---
 
 ## Phase 4 — Wrapped
-- Year summary output
+- Deterministic yearly summary
 - Top artists and tracks per year
-- Most active month
-- Simple text/JSON export
+- Peak hour / month
+- Total minutes + plays
+- Output formats:
+  - CLI (text)
+  - JSON
 
 ---
 
 ## Phase 5 — CLI
-- import <file>
+- import <path>
 - stats
 - top-artists
 - top-tracks
 - monthly
+- yearly
+- hourly
+- audit
+- insights
+- wrapped
 
 ---
 
@@ -60,7 +84,7 @@
 
 ---
 
-## Phase 8 — Nice to Have (later)
-- Optional metadata enrichment (Spotify API)
-- Basic web UI (only if needed)
-- Export formats (CSV / JSON)
+## Phase 8 — Nice to Have
+- CSV export
+- Metadata enrichment (Spotify API)
+- Minimal web UI (only if needed)
