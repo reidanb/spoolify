@@ -18,25 +18,25 @@
 ---
 
 ## Phase 3 — Time ✅
-- Monthly listening stats (plays + minutes)
-- Yearly summary
-- Hour-of-day listening patterns
+- Monthly listening stats (plays + minutes) ✅
+- Yearly summary ✅
+- Hour-of-day listening patterns ✅
 
 ---
 
-## Phase 3.5 — Analysis & Audit 🔥
+## Phase 3.5 — Analysis & Audit ✅
+
 - Peak listening hour / month / year
-- Listening behaviour profile (e.g. afternoon vs night listener)
-- Trend analysis (year-over-year growth/decline)
+- Listening behaviour profile (time-of-day buckets, primary profile, confidence)
+- Year-over-year trend analysis (minutes-based)
+- Deterministic insights (peak, decline, recovery)
+- Trend segmentation (growth / decline / recovery)
 - Data validation:
-  - duplicate detection
-  - zero-minute or malformed plays
-  - gaps in timeline (missing months/years)
-- Import summary:
-  - files processed
-  - rows ingested
-  - duplicates skipped
-- JSON export support for all outputs
+  - baseline years
+  - low-signal years
+  - partial years
+- Platform switch detection (flag + data confidence)
+- Fully deterministic structured output (no randomness)
 
 ---
 
@@ -59,7 +59,7 @@
 - monthly
 - yearly
 - hourly
-- audit
+- trends
 - insights
 - wrapped
 
