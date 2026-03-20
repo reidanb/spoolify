@@ -22,9 +22,17 @@ import sys
 import os
 from db import get_connection, init_db
 from importer import import_file
-from queries import print_top_artists, print_stats
+from queries import print_top_artists, print_stats, get_yearly_trend
 
 def main():
+    if sys.argv[1] == "--trends":
+        conn = get_connection()
+        init_db(conn)
+        trend = get_yearly_trend(conn)
+        import json
+        print(json.dumps(trend, indent=2))
+        conn.close()
+        return
     if len(sys.argv) < 2:
         print(f"Usage: {os.path.basename(sys.argv[0])} <spotify_json_file> [--top-artists]\n       or: {os.path.basename(sys.argv[0])} --top-artists")
         sys.exit(1)
