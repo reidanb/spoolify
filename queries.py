@@ -1,3 +1,113 @@
+import json
+
+def get_wrapped(conn, year=None):
+    """
+    Returns a deterministic yearly summary for the most recent complete year (or a specific year if provided).
+    Composes from existing stats, profile, and trend logic. No new analytics.
+    """
+    # Get yearly stats
+    cur = conn.cursor()
+    cur.execute('''
+        SELECT substr(ts, 1, 4) AS year, COUNT(*) AS plays, SUM(ms_played) / 60000 AS minutes
+        FROM plays
+        WHERE ts IS NOT NULL
+        GROUP BY year
+        ORDER BY year
+    ''')
+    years = cur.fetchall()
+    if not years:
+        return {"error": "No data available"}
+    # Exclude partial years (last year with much lower minutes than previous)
+    year_data = {int(y): {"plays": p, "minutes": int(m)} for y, p, m in years}
+    sorted_years = sorted(year_data)
+    if len(sorted_years) >= 2:
+        last, prev = sorted_years[-1], sorted_years[-2]
+        if year_data[last]["minutes"] < 0.5 * year_data[prev]["minutes"]:
+            sorted_years = sorted_years[:-1]
+    if not sorted_years:
+        return {"error": "No complete year available"}
+    # Pick year
+    if year is None:
+        target_year = sorted_years[-1]
+    else:
+        if int(year) not in sorted_years:
+            return {"error": f"Year {year} not found"}
+        target_year = int(year)
+    # Get stats for target year
+    stats = year_data[target_year]
+    # Top artists
+    cur.execute('''
+        SELECT artist_name, SUM(ms_played) / 60000 AS minutes
+        FROM plays
+        WHERE artist_name IS NOT NULL AND substr(ts, 1, 4) = ?
+        GROUP BY artist_name
+        ORDER BY minutes DESC
+        LIMIT 5
+    ''', (str(target_year),))
+    top_artists = cur.fetchall()
+    # Top tracks
+    cur.execute('''
+        SELECT track_name, artist_name, SUM(ms_played) / 60000 AS minutes
+        FROM plays
+        WHERE track_name IS NOT NULL AND artist_name IS NOT NULL AND substr(ts, 1, 4) = ?
+        GROUP BY track_name, artist_name
+        ORDER BY minutes DESC
+        LIMIT 5
+    ''', (str(target_year),))
+    top_tracks = cur.fetchall()
+    # Peak month
+    cur.execute('''
+        SELECT substr(ts, 6, 2) AS month, SUM(ms_played) / 60000 AS minutes
+        FROM plays
+        WHERE ts IS NOT NULL AND substr(ts, 1, 4) = ?
+        GROUP BY month
+        ORDER BY minutes DESC
+        LIMIT 1
+    ''', (str(target_year),))
+    peak_month = cur.fetchone()
+    # Peak hour
+    cur.execute('''
+        SELECT CAST(strftime('%H', ts) AS INTEGER) AS hour, SUM(ms_played) / 60000 AS minutes
+        FROM plays
+        WHERE ts IS NOT NULL AND substr(ts, 1, 4) = ?
+        GROUP BY hour
+        ORDER BY minutes DESC
+        LIMIT 1
+    ''', (str(target_year),))
+    peak_hour = cur.fetchone()
+    # Compose profile for year
+    cur.execute('''
+        SELECT CAST(strftime('%H', ts) AS INTEGER) AS hour, SUM(ms_played) / 60000.0 AS minutes
+        FROM plays
+        WHERE ts IS NOT NULL AND substr(ts, 1, 4) = ?
+        GROUP BY hour
+    ''', (str(target_year),))
+    hour_data = cur.fetchall()
+    buckets = [(0, 6, "night"), (6, 12, "morning"), (12, 18, "afternoon"), (18, 24, "evening")]
+    bucket_labels = [b[2] for b in buckets]
+    bucket_minutes = {label: 0 for label in bucket_labels}
+    total_minutes = sum(minutes for _, minutes in hour_data)
+    for hour, minutes in hour_data:
+        for start, end, label in buckets:
+            if start <= hour < end:
+                bucket_minutes[label] += minutes
+                break
+    bucket_pct = {label: (bucket_minutes[label] / total_minutes * 100) if total_minutes > 0 else 0 for label in bucket_labels}
+    primary_label = max(bucket_labels, key=lambda l: bucket_pct[l]) if total_minutes > 0 else None
+    # Compose output
+    return {
+        "year": target_year,
+        "total_minutes": stats["minutes"],
+        "total_plays": stats["plays"],
+        "top_artists": [{"artist": a, "minutes": int(m)} for a, m in top_artists],
+        "top_tracks": [{"track": t, "artist": a, "minutes": int(m)} for t, a, m in top_tracks],
+        "peak_month": peak_month[0] if peak_month else None,
+        "peak_hour": peak_hour[0] if peak_hour else None,
+        "profile": {
+            "bucket_pct": bucket_pct,
+            "primary": primary_label
+        }
+    }
 def get_yearly_trend(conn):
     """
     Returns a dict with:
