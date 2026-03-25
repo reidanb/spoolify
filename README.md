@@ -12,6 +12,10 @@
    <b>Spoolify</b> (aka <b>Spooly</b>) converts your Spotify Extended Streaming History JSON into a fast, queryable SQLite database. Designed for speed, privacy, and reproducibility—no Spotify API required.
 </p>
 
+<p align="center">
+   Use it as a <b>CLI tool</b> for local workflows or run it as a <b>web API</b> with FastAPI.
+</p>
+
 ---
 
 ## ⚡ Features
@@ -20,21 +24,48 @@
 - Local SQLite storage
 - Idempotent inserts (no duplicates)
 - High-performance bulk insert
+- CLI analytics commands (stats, top artists/tracks, monthly/yearly/hourly, trends, wrapped)
+- Read-only FastAPI web API for dashboards, scripts, and integrations
 - No API or account required
 
 ---
 
 ## 🚀 Usage
 
+### CLI Mode
+
+Run commands directly with `main.py`:
+
 ```sh
-python main.py <path_to_json_or_directory>
+python main.py import <path_to_json_or_directory>
+```
+
+Or use the unified entrypoint:
+
+```sh
+python entrypoint.py <cli-command>
+```
+
+Common commands:
+
+```sh
+python main.py import "C:/path/to/Spotify Extended Streaming History"
+python main.py stats
+python main.py top-artists
+python main.py top-tracks
+python main.py monthly
+python main.py yearly
+python main.py hourly
+python main.py trends
+python main.py insights
+python main.py wrapped --year 2025 --json
 ```
 
 Examples:
 
 ```sh
-python main.py "Streaming_History_Audio_2025-2026_10.json"
-python main.py "C:/Users/nonadmin_reidan/Downloads/Spotify Extended Streaming History"
+python main.py import "Streaming_History_Audio_2025-2026_10.json"
+python entrypoint.py import "C:/Users/nonadmin_reidan/Downloads/Spotify Extended Streaming History"
 ```
 
 Example output:
@@ -45,6 +76,41 @@ Duplicates skipped: 0
 Total rows in database: 7504
 ```
 
+### Web API Mode
+
+Start the API server:
+
+```sh
+python entrypoint.py serve
+```
+
+Optional environment variables:
+
+```env
+SPOOLIFY_API_HOST=0.0.0.0
+SPOOLIFY_API_PORT=8000
+```
+
+Useful URLs after startup:
+
+- API base: `http://localhost:8000`
+- Swagger docs: `http://localhost:8000/docs`
+- ReDoc: `http://localhost:8000/redoc`
+
+Main endpoints:
+
+- `GET /health`
+- `GET /stats`
+- `GET /top-artists?limit=10`
+- `GET /top-tracks?limit=10`
+- `GET /monthly`
+- `GET /yearly`
+- `GET /hourly`
+- `GET /trends`
+- `GET /wrapped?year=2025`
+
+See full API details in `docs/API.md`.
+
 ---
 
 ## 🛠️ Environment Setup
@@ -53,6 +119,8 @@ Spoolify uses a `.env` file for configuration. See `.env_example`:
 
 ```
 SPOOLIFY_DB_FILE=spoolify.db
+SPOOLIFY_API_HOST=0.0.0.0
+SPOOLIFY_API_PORT=8000
 ```
 
 Copy `.env_example` to `.env` and adjust as needed:
@@ -72,7 +140,7 @@ cp .env_example .env
 Example (Windows PowerShell):
 
 ```
-Measure-Command { python main.py "C:/Users/nonadmin_reidan/Downloads/Spotify Extended Streaming History" }
+Measure-Command { python main.py import "C:/Users/nonadmin_reidan/Downloads/Spotify Extended Streaming History" }
 
 Days              : 0
 Hours             : 0
@@ -101,10 +169,25 @@ Total play count  : 166,140
 
 ---
 
+## 🔌 API Dependencies
+
+CLI mode works with the standard library.
+
+API mode requires:
+
+```sh
+pip install fastapi uvicorn
+```
+
+---
+
 ## 📁 Project Structure
 
 ```
 Spoolify/
+├── entrypoint.py
+├── api.py
+├── query_data.py
 ├── main.py
 ├── db.py
 ├── queries.py
@@ -113,6 +196,7 @@ Spoolify/
 │   ├── perf_import.ps1
 │   └── tests.json
 ├── docs/
+│   ├── API.md
 │   └── img/
 │       └── logo.png
 ├── .env_example
