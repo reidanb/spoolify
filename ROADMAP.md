@@ -40,39 +40,44 @@
 
 ---
 
-## Phase 4 — Wrapped
-- Deterministic yearly summary
-- Top artists and tracks per year
-- Peak hour / month
-- Total minutes + plays
+## Phase 4 — Wrapped ✅
+- Deterministic yearly summary ✅
+- Top artists and tracks per year ✅
+- Peak hour / month ✅
+- Total minutes + plays ✅
 - Output formats:
-  - CLI (text)
-  - JSON
+  - CLI (text) ✅
+  - JSON ✅
 
 ---
 
-## Phase 5 — CLI
-- import <path>
-- stats
-- top-artists
-- top-tracks
-- monthly
-- yearly
-- hourly
-- trends
-- insights
-- wrapped
+## Phase 5 — CLI ✅
+- import <path> ✅
+- stats ✅
+- top-artists ✅
+- top-tracks ✅
+- monthly ✅
+- yearly ✅
+- hourly ✅
+- trends ✅
+- insights ✅
+- wrapped ✅
 
 ---
 
-## Phase 6 — Service (optional)
-- FastAPI layer
+## Phase 6 — Service (optional) ✅
+- FastAPI layer ✅
 - Read-only endpoints:
-  - /stats
-  - /top-artists
-  - /top-tracks
-  - /timeline
-- No auth, no multi-user (v1)
+  - /health ✅
+  - /stats ✅
+  - /top-artists ✅
+  - /top-tracks ✅
+  - /monthly ✅
+  - /yearly ✅
+  - /hourly ✅
+  - /trends ✅
+  - /wrapped ✅
+- No auth, no multi-user (v1) ✅
 
 ---
 
