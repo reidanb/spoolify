@@ -30,6 +30,14 @@ app = FastAPI(
     version="1.0.0"
 )
 
+# ZIP safety limits for onboarding uploads.
+MAX_ZIP_UPLOAD_BYTES = 200 * 1024 * 1024
+MAX_ZIP_ENTRIES = 2000
+MAX_ZIP_JSON_FILES = 500
+MAX_ZIP_TOTAL_UNCOMPRESSED_BYTES = 512 * 1024 * 1024
+MAX_ZIP_FILE_UNCOMPRESSED_BYTES = 64 * 1024 * 1024
+MAX_ZIP_COMPRESSION_RATIO = 200
+
 ACCOUNT_INFO_EXPORT_MARKERS = {
     "yoursoundcapsule.json",
     "yourlibrary.json",
@@ -343,31 +351,134 @@ def _extract_zip_json_files(upload: UploadFile) -> List[Path]:
     with tempfile.TemporaryDirectory(prefix="spoolify_zip_") as temp_dir:
         temp_dir_path = Path(temp_dir)
         zip_path = temp_dir_path / "upload.zip"
+
+        # Copy uploaded bytes with a strict upper bound to prevent oversized uploads.
+        total_uploaded = 0
+        upload.file.seek(0)
         with zip_path.open("wb") as f:
-            upload.file.seek(0)
-            shutil.copyfileobj(upload.file, f)
+            while True:
+                chunk = upload.file.read(1024 * 1024)
+                if not chunk:
+                    break
+                total_uploaded += len(chunk)
+                if total_uploaded > MAX_ZIP_UPLOAD_BYTES:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=(
+                            "ZIP upload is too large. "
+                            f"Max allowed size is {MAX_ZIP_UPLOAD_BYTES // (1024 * 1024)} MB."
+                        ),
+                    )
+                f.write(chunk)
 
         try:
             with zipfile.ZipFile(zip_path) as zf:
-                zf.extractall(temp_dir_path)
+                infos = zf.infolist()
+                if len(infos) > MAX_ZIP_ENTRIES:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=(
+                            "ZIP has too many entries. "
+                            f"Max allowed is {MAX_ZIP_ENTRIES}."
+                        ),
+                    )
+
+                json_infos = []
+                total_uncompressed = 0
+                for info in infos:
+                    if info.is_dir():
+                        continue
+
+                    normalized_name = info.filename.replace("\\", "/")
+                    parts = Path(normalized_name).parts
+                    if normalized_name.startswith("/") or ".." in parts:
+                        raise HTTPException(status_code=400, detail="ZIP contains unsafe file paths")
+
+                    # Block symlink-like entries from untrusted archives.
+                    mode_bits = (info.external_attr >> 16) & 0o170000
+                    if mode_bits == 0o120000:
+                        raise HTTPException(status_code=400, detail="ZIP contains unsupported symlink entries")
+
+                    if info.flag_bits & 0x1:
+                        raise HTTPException(status_code=400, detail="Encrypted ZIP entries are not supported")
+
+                    if not normalized_name.lower().endswith(".json"):
+                        continue
+
+                    if info.file_size > MAX_ZIP_FILE_UNCOMPRESSED_BYTES:
+                        raise HTTPException(
+                            status_code=400,
+                            detail=(
+                                f"ZIP entry {Path(normalized_name).name} is too large after decompression. "
+                                f"Max per JSON file is {MAX_ZIP_FILE_UNCOMPRESSED_BYTES // (1024 * 1024)} MB."
+                            ),
+                        )
+
+                    compressed_size = max(info.compress_size, 1)
+                    ratio = info.file_size / compressed_size
+                    if info.file_size >= (1024 * 1024) and ratio > MAX_ZIP_COMPRESSION_RATIO:
+                        raise HTTPException(
+                            status_code=400,
+                            detail=(
+                                f"ZIP entry {Path(normalized_name).name} has suspicious compression ratio ({ratio:.1f}x)."
+                            ),
+                        )
+
+                    total_uncompressed += info.file_size
+                    if total_uncompressed > MAX_ZIP_TOTAL_UNCOMPRESSED_BYTES:
+                        raise HTTPException(
+                            status_code=400,
+                            detail=(
+                                "Total decompressed JSON size is too large. "
+                                f"Max allowed is {MAX_ZIP_TOTAL_UNCOMPRESSED_BYTES // (1024 * 1024)} MB."
+                            ),
+                        )
+
+                    json_infos.append(info)
+
+                if not json_infos:
+                    raise HTTPException(status_code=400, detail="No .json files found inside ZIP archive")
+                if len(json_infos) > MAX_ZIP_JSON_FILES:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=(
+                            "ZIP contains too many JSON files. "
+                            f"Max allowed is {MAX_ZIP_JSON_FILES}."
+                        ),
+                    )
+
+                staged_dir = Path(tempfile.mkdtemp(prefix="spoolify_zip_staged_"))
+                staged_files: List[Path] = []
+                try:
+                    for idx, info in enumerate(json_infos):
+                        target_dir = staged_dir / f"{idx:04d}"
+                        target_dir.mkdir(parents=True, exist_ok=True)
+                        target = target_dir / Path(info.filename).name
+
+                        with zf.open(info, "r") as src, target.open("wb") as dst:
+                            written = 0
+                            while True:
+                                chunk = src.read(1024 * 1024)
+                                if not chunk:
+                                    break
+                                written += len(chunk)
+                                if written > MAX_ZIP_FILE_UNCOMPRESSED_BYTES:
+                                    raise HTTPException(
+                                        status_code=400,
+                                        detail=(
+                                            f"ZIP entry {target.name} exceeded per-file decompression limit."
+                                        ),
+                                    )
+                                dst.write(chunk)
+
+                        staged_files.append(target)
+
+                    return staged_files
+                except Exception:
+                    shutil.rmtree(staged_dir, ignore_errors=True)
+                    raise
         except zipfile.BadZipFile:
             raise HTTPException(status_code=400, detail="Uploaded file is not a valid ZIP archive")
-
-        extracted_files = sorted(p for p in temp_dir_path.rglob("*.json") if p.is_file())
-        if not extracted_files:
-            raise HTTPException(status_code=400, detail="No .json files found inside ZIP archive")
-
-        staged_dir = Path(tempfile.mkdtemp(prefix="spoolify_zip_staged_"))
-        staged_files: List[Path] = []
-        for idx, source_file in enumerate(extracted_files):
-            # Keep original file names for export-type detection while avoiding collisions.
-            target_dir = staged_dir / f"{idx:04d}"
-            target_dir.mkdir(parents=True, exist_ok=True)
-            target = target_dir / source_file.name
-            shutil.copy2(source_file, target)
-            staged_files.append(target)
-
-    return staged_files
 
 
 def _cleanup_staged_files(files: List[Path]) -> None:
