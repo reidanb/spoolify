@@ -32,3 +32,6 @@ tests/stderr.log
 
 # Jupyter Notebook checkpoints
 .ipynb_checkpoints/
+
+# GitHub workflows
+.github/
