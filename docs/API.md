@@ -20,7 +20,7 @@ The FastAPI service provides a lightweight, read-only REST API to access Spoolif
 ### Install Dependencies
 
 ```bash
-pip install fastapi uvicorn
+pip install fastapi uvicorn python-multipart
 ```
 
 Or with optional dotenv support:
@@ -60,6 +60,14 @@ export SPOOLIFY_API_PORT=8000
 ```
 
 ## API Endpoints
+
+### Onboarding Frontend
+
+```
+GET /
+```
+
+Serves the Phase 7 onboarding web UI for archive preparation and guided import.
 
 ### Health Check
 
@@ -263,6 +271,115 @@ Returns yearly wrapped summary (like Spotify Wrapped).
     },
     "primary": "afternoon"
   }
+}
+```
+
+### Validate Archive (Phase 7)
+
+```
+POST /onboarding/validate-archive
+```
+
+Validates a Spotify archive file/directory before import by sampling JSON structure and timestamps.
+
+**Request Body:**
+```json
+{
+  "path": "C:/Users/you/Downloads/Spotify Extended Streaming History"
+}
+```
+
+### Validate Archive ZIP (Phase 7)
+
+```
+POST /onboarding/validate-archive-zip
+```
+
+Validates a Spotify ZIP archive upload (multipart form-data).
+
+**Form fields:**
+
+- `file`: ZIP file containing one or more streaming history JSON files
+
+**Response (example):**
+```json
+{
+  "path": "C:/Users/you/Downloads/Spotify Extended Streaming History",
+  "archive_type": "directory",
+  "json_files_found": 12,
+  "json_files_sampled": 8,
+  "sampled_entries": 2000,
+  "entries_with_track_uri": 1988,
+  "entries_missing_track_uri": 12,
+  "expected_key_match_pct": 99.3,
+  "archive_timespan": {
+    "start": "2018-01-01T07:15:00+00:00",
+    "end": "2026-03-22T22:41:00+00:00"
+  },
+  "db_state": {
+    "total_rows": 166140,
+    "latest_ts": "2026-03-19T20:12:23+00:00"
+  },
+  "issues": [],
+  "recommended_mode": "ongoing_sync_prep",
+  "reason": "Archive includes recent playback and database already has data; use this to top up before sync."
+}
+```
+
+### Import Archive (Phase 7)
+
+```
+POST /onboarding/import
+```
+
+Imports a Spotify archive file/directory and returns per-file and total insertion stats.
+
+**Request Body:**
+```json
+{
+  "path": "C:/Users/you/Downloads/Spotify Extended Streaming History",
+  "mode": "historical_backfill"
+}
+```
+
+### Import Archive ZIP (Phase 7)
+
+```
+POST /onboarding/import-zip
+```
+
+Imports Spotify history from a ZIP upload (multipart form-data).
+
+**Form fields:**
+
+- `file`: ZIP file containing streaming history JSON files
+- `mode`: `historical_backfill` or `ongoing_sync_prep`
+
+Allowed `mode` values:
+
+- `historical_backfill`
+- `ongoing_sync_prep`
+
+**Response (example):**
+```json
+{
+  "mode": "historical_backfill",
+  "files_processed": 12,
+  "totals": {
+    "inserted": 152321,
+    "duplicates": 218,
+    "attempted": 152539,
+    "skipped_missing_track_uri": 941,
+    "total_rows": 166140
+  },
+  "files": [
+    {
+      "file": "Streaming_History_Audio_2025-2026_0.json",
+      "inserted": 12873,
+      "duplicates": 2,
+      "attempted": 12875
+    }
+  ]
 }
 ```
 

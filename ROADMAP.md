@@ -80,7 +80,7 @@
 
 ---
 
-## Phase 7 — Onboarding & Data Acquisition
+## Phase 7 — Onboarding & Data Acquisition (In Progress)
 - First-run onboarding flow
 - Guide users through requesting Spotify Extended Streaming History
 - Explain Spotify export wait time and expected archive contents
