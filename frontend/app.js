@@ -1,13 +1,25 @@
-const validateForm = document.getElementById("validate-form");
-const importForm = document.getElementById("import-form");
-const archivePathInput = document.getElementById("archive-path");
+const startBtn = document.getElementById("start-btn");
+const restartBtn = document.getElementById("restart-btn");
+const stepTwoBackBtn = document.getElementById("to-step-1");
+const stepThreeBackBtn = document.getElementById("to-step-2");
+const stepFourBackBtn = document.getElementById("to-step-3b");
+const stepTwoContinueBtn = document.getElementById("to-step-3");
+const stepThreeContinueBtn = document.getElementById("to-step-4");
+const validateZipBtn = document.getElementById("validate-zip-btn");
+const importZipBtn = document.getElementById("import-zip-btn");
+
+const steps = Array.from(document.querySelectorAll("[data-step]"));
+const indicators = Array.from(document.querySelectorAll("[data-step-indicator]"));
+
 const modeInput = document.getElementById("import-mode");
 const validateOutput = document.getElementById("validate-output");
 const importOutput = document.getElementById("import-output");
+const doneOutput = document.getElementById("done-output");
 const zipInput = document.getElementById("archive-zip");
-const zipValidateBtn = document.getElementById("zip-validate-btn");
-const zipImportBtn = document.getElementById("zip-import-btn");
-const zipOutput = document.getElementById("zip-output");
+const zipSelected = document.getElementById("zip-selected");
+
+let currentStep = 1;
+let validationPassed = false;
 
 function renderValidationSummary(payload) {
   const lines = [];
@@ -59,76 +71,6 @@ function renderImportSummary(payload) {
   return lines.join("\n");
 }
 
-validateForm.addEventListener("submit", async (event) => {
-  event.preventDefault();
-  const path = archivePathInput.value.trim();
-  if (!path) {
-    validateOutput.textContent = "Please enter a file or directory path.";
-    return;
-  }
-
-  validateOutput.textContent = "Validating archive...";
-
-  try {
-    const response = await fetch("/onboarding/validate-archive", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ path }),
-    });
-
-    const data = await response.json();
-    console.log("Validate archive response", data);
-    if (!response.ok) {
-      validateOutput.textContent = data.detail || "Validation failed.";
-      return;
-    }
-
-    if (data.recommended_mode) {
-      modeInput.value = data.recommended_mode;
-    }
-
-    if (data.detected_export_type === "account_info_export") {
-      alert("Detected Spotify account-info export. Spoolify currently imports only Extended Streaming History JSON files.");
-    }
-
-    validateOutput.textContent = renderValidationSummary(data);
-  } catch (error) {
-    validateOutput.textContent = `Validation error: ${error}`;
-  }
-});
-
-importForm.addEventListener("submit", async (event) => {
-  event.preventDefault();
-  const path = archivePathInput.value.trim();
-  const mode = modeInput.value;
-
-  if (!path) {
-    importOutput.textContent = "Set archive path before importing.";
-    return;
-  }
-
-  importOutput.textContent = "Importing... this can take a while for large archives.";
-
-  try {
-    const response = await fetch("/onboarding/import", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ path, mode }),
-    });
-
-    const data = await response.json();
-    console.log("Import archive response", data);
-    if (!response.ok) {
-      importOutput.textContent = data.detail || "Import failed.";
-      return;
-    }
-
-    importOutput.textContent = renderImportSummary(data);
-  } catch (error) {
-    importOutput.textContent = `Import error: ${error}`;
-  }
-});
-
 function getSelectedZip() {
   if (!zipInput || !zipInput.files || zipInput.files.length === 0) {
     return null;
@@ -136,14 +78,63 @@ function getSelectedZip() {
   return zipInput.files[0];
 }
 
-zipValidateBtn.addEventListener("click", async () => {
+function setStep(stepNumber) {
+  currentStep = stepNumber;
+  steps.forEach((stepNode) => {
+    const isCurrent = Number(stepNode.dataset.step) === stepNumber;
+    stepNode.classList.toggle("hidden", !isCurrent);
+  });
+  indicators.forEach((indicatorNode) => {
+    const index = Number(indicatorNode.dataset.stepIndicator);
+    indicatorNode.classList.toggle("active", index <= stepNumber);
+  });
+}
+
+function resetFlow() {
+  validationPassed = false;
+  stepThreeContinueBtn.disabled = true;
+  validateOutput.textContent = "Validation not started.";
+  importOutput.textContent = "Import not started.";
+  doneOutput.textContent = "Awaiting import summary.";
+  setStep(1);
+}
+
+zipInput.addEventListener("change", () => {
   const file = getSelectedZip();
   if (!file) {
-    zipOutput.textContent = "Choose a ZIP file first.";
+    zipSelected.textContent = "No ZIP selected.";
+    stepTwoContinueBtn.disabled = true;
+    return;
+  }
+  zipSelected.textContent = `Selected: ${file.name}`;
+  stepTwoContinueBtn.disabled = false;
+  validationPassed = false;
+  stepThreeContinueBtn.disabled = true;
+});
+
+startBtn.addEventListener("click", () => setStep(2));
+restartBtn.addEventListener("click", () => resetFlow());
+stepTwoBackBtn.addEventListener("click", () => setStep(1));
+stepThreeBackBtn.addEventListener("click", () => setStep(2));
+stepFourBackBtn.addEventListener("click", () => setStep(3));
+stepTwoContinueBtn.addEventListener("click", () => setStep(3));
+stepThreeContinueBtn.addEventListener("click", () => {
+  if (validationPassed) {
+    setStep(4);
+  }
+});
+
+validateZipBtn.addEventListener("click", async () => {
+  const file = getSelectedZip();
+  if (!file) {
+    validateOutput.textContent = "Choose a ZIP file first.";
     return;
   }
 
-  zipOutput.textContent = "Validating ZIP archive...";
+  validateOutput.textContent = "Validating ZIP archive...";
+  validationPassed = false;
+  stepThreeContinueBtn.disabled = true;
+
   const formData = new FormData();
   formData.append("file", file);
 
@@ -156,7 +147,7 @@ zipValidateBtn.addEventListener("click", async () => {
     const data = await response.json();
     console.log("Validate ZIP response", data);
     if (!response.ok) {
-      zipOutput.textContent = data.detail || "ZIP validation failed.";
+      validateOutput.textContent = data.detail || "ZIP validation failed.";
       return;
     }
 
@@ -166,22 +157,31 @@ zipValidateBtn.addEventListener("click", async () => {
 
     if (data.detected_export_type === "account_info_export") {
       alert("Detected Spotify account-info export in ZIP. Spoolify currently imports only Extended Streaming History JSON files.");
+      validateOutput.textContent = renderValidationSummary(data);
+      return;
     }
 
-    zipOutput.textContent = renderValidationSummary(data);
+    validateOutput.textContent = renderValidationSummary(data);
+    validationPassed = true;
+    stepThreeContinueBtn.disabled = false;
   } catch (error) {
-    zipOutput.textContent = `ZIP validation error: ${error}`;
+    validateOutput.textContent = `ZIP validation error: ${error}`;
   }
 });
 
-zipImportBtn.addEventListener("click", async () => {
+importZipBtn.addEventListener("click", async () => {
   const file = getSelectedZip();
   if (!file) {
-    zipOutput.textContent = "Choose a ZIP file first.";
+    importOutput.textContent = "Choose a ZIP file first.";
     return;
   }
 
-  zipOutput.textContent = "Importing ZIP archive... this can take a while for large files.";
+  if (!validationPassed) {
+    importOutput.textContent = "Run validation successfully before importing.";
+    return;
+  }
+
+  importOutput.textContent = "Importing ZIP archive... this can take a while for large files.";
   const formData = new FormData();
   formData.append("file", file);
   formData.append("mode", modeInput.value);
@@ -195,12 +195,17 @@ zipImportBtn.addEventListener("click", async () => {
     const data = await response.json();
     console.log("Import ZIP response", data);
     if (!response.ok) {
-      zipOutput.textContent = data.detail || "ZIP import failed.";
+      importOutput.textContent = data.detail || "ZIP import failed.";
       return;
     }
 
-    zipOutput.textContent = renderImportSummary(data);
+    const summary = renderImportSummary(data);
+    importOutput.textContent = summary;
+    doneOutput.textContent = summary;
+    setStep(5);
   } catch (error) {
-    zipOutput.textContent = `ZIP import error: ${error}`;
+    importOutput.textContent = `ZIP import error: ${error}`;
   }
 });
+
+resetFlow();
