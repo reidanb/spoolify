@@ -94,6 +94,7 @@ SPOOLIFY_API_PORT=8000
 Useful URLs after startup:
 
 - API base: `http://localhost:8000`
+- Onboarding UI: `http://localhost:8000/`
 - Swagger docs: `http://localhost:8000/docs`
 - ReDoc: `http://localhost:8000/redoc`
 
@@ -108,8 +109,29 @@ Main endpoints:
 - `GET /hourly`
 - `GET /trends`
 - `GET /wrapped?year=2025`
+- `POST /onboarding/validate-archive`
+- `POST /onboarding/import`
+- `POST /onboarding/validate-archive-zip`
+- `POST /onboarding/import-zip`
 
 See full API details in `docs/API.md`.
+
+### Frontend Onboarding (Phase 7 Start)
+
+When API mode is running, open the onboarding page in your browser:
+
+```sh
+http://localhost:8000/
+```
+
+The page helps you:
+
+- request and prepare Spotify Extended Streaming History
+- validate archive file/folder structure before import
+- validate and import the delivered ZIP archive directly
+- import in either `historical_backfill` or `ongoing_sync_prep` mode
+- review Spotify Developer app prerequisites for future sync phases
+- keep a privacy-first, local-first setup
 
 ---
 
@@ -176,7 +198,7 @@ CLI mode works with the standard library.
 API mode requires:
 
 ```sh
-pip install fastapi uvicorn
+pip install fastapi uvicorn python-multipart
 ```
 
 ---
