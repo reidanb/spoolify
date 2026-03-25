@@ -86,6 +86,44 @@ body {
   margin-top: 1rem;
 }
 
+.wizard {
+  max-width: 760px;
+  margin-inline: auto;
+}
+
+.progress {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.4rem;
+  margin-bottom: 1rem;
+}
+
+.step-indicator {
+  text-align: center;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.74rem;
+  padding: 0.45rem 0.25rem;
+  border: 1px dashed #c9b8a2;
+  border-radius: 10px;
+  color: #7c6752;
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.step-indicator.active {
+  color: #fff;
+  border-color: transparent;
+  background: linear-gradient(135deg, var(--accent-2), #2f8f80);
+}
+
+.step {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.step.hidden {
+  display: none;
+}
+
 .card,
 .panel {
   background: var(--panel);
@@ -154,6 +192,18 @@ button {
 button:hover {
   transform: translateY(-1px);
   filter: brightness(1.03);
+}
+
+button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+button.ghost {
+  background: #fff;
+  color: #72553d;
+  border: 1px solid #c5b39d;
 }
 
 .output {

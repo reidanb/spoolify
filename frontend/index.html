@@ -17,80 +17,69 @@
     <header class="hero reveal">
       <p class="eyebrow">Phase 7 Onboarding</p>
       <h1>Bring your Spotify history into Spoolify</h1>
-      <p class="subtitle">Local-first onboarding to validate your archive, import safely, and prepare for account sync when you are ready.</p>
+      <p class="subtitle">One guided step at a time: welcome, choose ZIP, validate archive, import if valid.</p>
     </header>
 
-    <section class="cards reveal">
-      <article class="card">
-        <h2>1. Request Spotify Data</h2>
-        <p>Open Spotify Privacy settings and request your <strong>Extended Streaming History</strong>. Delivery usually takes a few days.</p>
-        <p class="meta">Expected files: one or more .json files containing playback events.</p>
-      </article>
-      <article class="card">
-        <h2>2. Validate Archive</h2>
-        <p>Paste your downloaded file or folder path. Spoolify will sample entries, detect structure issues, and recommend import mode.</p>
-      </article>
-      <article class="card">
-        <h2>3. Import and Analyze</h2>
-        <p>Run historical backfill first if this is your first import. Use sync prep when adding recent data before API sync.</p>
-      </article>
-    </section>
+    <section class="panel wizard reveal">
+      <div class="progress" aria-label="Onboarding progress">
+        <div class="step-indicator active" data-step-indicator="1">1 Welcome</div>
+        <div class="step-indicator" data-step-indicator="2">2 Choose ZIP</div>
+        <div class="step-indicator" data-step-indicator="3">3 Validate</div>
+        <div class="step-indicator" data-step-indicator="4">4 Import</div>
+        <div class="step-indicator" data-step-indicator="5">5 Done</div>
+      </div>
 
-    <section class="panel reveal">
-      <h2>Archive Validation</h2>
-      <form id="validate-form" class="stack">
-        <label for="archive-path">Archive path (file or directory)</label>
-        <input id="archive-path" name="archive-path" type="text" placeholder="C:/Users/you/Downloads/Spotify Extended Streaming History" required />
-        <button type="submit">Validate Archive</button>
-      </form>
-      <pre id="validate-output" class="output" aria-live="polite">Awaiting validation...</pre>
-    </section>
+      <section class="step" data-step="1">
+        <h2>Welcome</h2>
+        <p>Spoolify currently imports only <strong>Extended Streaming History</strong> JSON data. If your ZIP is an account-info export, we will flag it before import.</p>
+        <p class="meta">Privacy-first note: your data stays local on your machine.</p>
+        <button id="start-btn" type="button">Start Walkthrough</button>
+      </section>
 
-    <section class="panel reveal">
-      <h2>ZIP Upload (Recommended)</h2>
-      <form id="zip-form" class="stack">
-        <label for="archive-zip">Spotify archive ZIP</label>
+      <section class="step hidden" data-step="2">
+        <h2>Select ZIP</h2>
+        <label for="archive-zip">Choose your Spotify export ZIP file</label>
         <input id="archive-zip" name="archive-zip" type="file" accept=".zip,application/zip" />
+        <p id="zip-selected" class="meta">No ZIP selected.</p>
         <div class="button-row">
-          <button id="zip-validate-btn" type="button">Validate ZIP</button>
-          <button id="zip-import-btn" type="button">Import ZIP</button>
+          <button id="to-step-1" type="button" class="ghost">Back</button>
+          <button id="to-step-3" type="button" disabled>Continue</button>
         </div>
-      </form>
-      <pre id="zip-output" class="output" aria-live="polite">No ZIP uploaded.</pre>
-    </section>
+      </section>
 
-    <section class="panel reveal">
-      <h2>Import Archive</h2>
-      <form id="import-form" class="stack">
+      <section class="step hidden" data-step="3">
+        <h2>Validate ZIP</h2>
+        <p>We will sample files and check that this is Extended Streaming History.</p>
+        <div class="button-row">
+          <button id="to-step-2" type="button" class="ghost">Back</button>
+          <button id="validate-zip-btn" type="button">Run Validation</button>
+        </div>
+        <pre id="validate-output" class="output" aria-live="polite">Validation not started.</pre>
+        <div class="button-row">
+          <button id="to-step-4" type="button" disabled>Continue to Import</button>
+        </div>
+      </section>
+
+      <section class="step hidden" data-step="4">
+        <h2>Import</h2>
         <label for="import-mode">Import mode</label>
         <select id="import-mode" name="import-mode">
           <option value="historical_backfill">Historical backfill (first-time full import)</option>
           <option value="ongoing_sync_prep">Ongoing sync prep (recent top-up)</option>
         </select>
-        <button type="submit">Start Import</button>
-      </form>
-      <pre id="import-output" class="output" aria-live="polite">No import started.</pre>
-    </section>
+        <div class="button-row">
+          <button id="to-step-3b" type="button" class="ghost">Back</button>
+          <button id="import-zip-btn" type="button">Start Import</button>
+        </div>
+        <pre id="import-output" class="output" aria-live="polite">Import not started.</pre>
+      </section>
 
-    <section class="cards reveal">
-      <article class="card">
-        <h2>Historical Backfill vs Ongoing Sync</h2>
-        <p><strong>Backfill:</strong> Bring years of history into SQLite. This is the foundation for deterministic analytics.</p>
-        <p><strong>Sync prep:</strong> Import a recent archive refresh before enabling near-real-time API polling in later phases.</p>
-      </article>
-      <article class="card">
-        <h2>Spotify Developer App Prep</h2>
-        <p>Phase 9 will use your own Spotify Developer app. Plan these now:</p>
-        <ul>
-          <li>Create app at developer.spotify.com</li>
-          <li>Set redirect URI for local callback (for example <code>http://127.0.0.1:8787/callback</code>)</li>
-          <li>Request scopes such as <code>user-read-recently-played</code> and <code>user-read-currently-playing</code></li>
-        </ul>
-      </article>
-      <article class="card">
-        <h2>Privacy-First Default</h2>
-        <p>Your archive and database stay local by default. No cloud account is required to use Spoolify analytics.</p>
-      </article>
+      <section class="step hidden" data-step="5">
+        <h2>Done</h2>
+        <p>Import completed. You can now use API analytics endpoints and wrapped summaries.</p>
+        <pre id="done-output" class="output" aria-live="polite">Awaiting import summary.</pre>
+        <button id="restart-btn" type="button">Run Another Import</button>
+      </section>
     </section>
   </main>
 
