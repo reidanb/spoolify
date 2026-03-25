@@ -405,11 +405,11 @@ def print_stats(conn):
     print("\n===== Spotify Listening Stats =====\n")
     print("Top 10 Artists (by listening time):")
     for idx, (artist, minutes) in enumerate(top_artists, 1):
-        print(f"{idx}. {artist} — {int(minutes)} minutes")
+        print(f"{idx}. {artist} - {int(minutes)} minutes")
 
     print("\nTop 10 Tracks (by listening time):")
     for idx, (track, artist, minutes) in enumerate(top_tracks, 1):
-        print(f"{idx}. {track} by {artist} — {int(minutes)} minutes")
+        print(f"{idx}. {track} by {artist} - {int(minutes)} minutes")
 
     print(f"\nTotal listening time: {total_minutes} minutes ({total_hours:.1f} hours)")
     print(f"Total play count: {play_count}")
@@ -430,7 +430,7 @@ def print_stats(conn):
     # Peak month (by minutes)
     if monthly:
         peak_month = max(monthly, key=lambda x: x[2])
-        print(f"\nPeak Month: {peak_month[0]} — {int(peak_month[2])} minutes")
+        print(f"\nPeak Month: {peak_month[0]} - {int(peak_month[2])} minutes")
 
     # Yearly summary
 
@@ -450,7 +450,7 @@ def print_stats(conn):
     # Peak year (by minutes)
     if yearly:
         peak_year = max(yearly, key=lambda x: x[2])
-        print(f"\nPeak Year: {peak_year[0]} — {int(peak_year[2])} minutes")
+        print(f"\nPeak Year: {peak_year[0]} - {int(peak_year[2])} minutes")
 
     # Hour-of-day listening patterns (optional)
     print("\nHour-of-Day Listening Patterns:")
@@ -463,12 +463,12 @@ def print_stats(conn):
     ''')
     hourly = cur.fetchall()
     for hour, count, minutes in hourly:
-        print(f"{hour:02d}:00 - {hour:02d}:59 — {count} plays, {int(minutes)} minutes")
+        print(f"{hour:02d}:00 - {hour:02d}:59 - {count} plays, {int(minutes)} minutes")
 
     # Peak hour (by minutes)
     if hourly:
         peak_hour = max(hourly, key=lambda x: x[2])
-        print(f"\nPeak Hour: {peak_hour[0]:02d}:00 - {peak_hour[0]:02d}:59 — {int(peak_hour[2])} minutes")
+        print(f"\nPeak Hour: {peak_hour[0]:02d}:00 - {peak_hour[0]:02d}:59 - {int(peak_hour[2])} minutes")
 def print_top_artists(conn):
     """
     Queries the plays table, groups by artist_name, sums ms_played (converted to minutes),
@@ -487,5 +487,122 @@ def print_top_artists(conn):
     results = cur.fetchall()
     print("Top Artists:")
     for idx, (artist, minutes) in enumerate(results, 1):
-        print(f"{idx}. {artist} — {int(minutes)} minutes")
+        print(f"{idx}. {artist} - {int(minutes)} minutes")
     return results
+
+def print_top_tracks(conn):
+    """
+    Queries the plays table, groups by track_name and artist_name, 
+    sums ms_played (converted to minutes), sorts descending, limits to top 10.
+    """
+    cur = conn.cursor()
+    cur.execute('''
+        SELECT track_name, artist_name, SUM(ms_played) / 60000 AS minutes
+        FROM plays
+        WHERE track_name IS NOT NULL AND artist_name IS NOT NULL
+        GROUP BY track_name, artist_name
+        ORDER BY minutes DESC
+        LIMIT 10
+    ''')
+    results = cur.fetchall()
+    print("Top Tracks:")
+    for idx, (track, artist, minutes) in enumerate(results, 1):
+        print(f"{idx}. {track} by {artist} - {int(minutes)} minutes")
+    return results
+
+def print_monthly(conn):
+    """
+    Prints monthly listening stats (plays + minutes).
+    """
+    cur = conn.cursor()
+    cur.execute('''
+        SELECT substr(ts, 1, 7) AS month, COUNT(*), SUM(ms_played) / 60000 AS minutes
+        FROM plays
+        WHERE ts IS NOT NULL
+        GROUP BY month
+        ORDER BY month
+    ''')
+    results = cur.fetchall()
+    print("Monthly Listening Stats:")
+    for month, count, minutes in results:
+        print(f"{month}: {count} plays, {int(minutes)} minutes")
+    
+    # Show peak month
+    if results:
+        peak = max(results, key=lambda x: x[2])
+        print(f"\nPeak Month: {peak[0]} - {int(peak[2])} minutes")
+    return results
+
+def print_yearly(conn):
+    """
+    Prints yearly listening stats (plays + minutes).
+    """
+    cur = conn.cursor()
+    cur.execute('''
+        SELECT substr(ts, 1, 4) AS year, COUNT(*), SUM(ms_played) / 60000 AS minutes
+        FROM plays
+        WHERE ts IS NOT NULL
+        GROUP BY year
+        ORDER BY year
+    ''')
+    results = cur.fetchall()
+    print("Yearly Listening Summary:")
+    for year, count, minutes in results:
+        print(f"{year}: {count} plays, {int(minutes)} minutes")
+    
+    # Show peak year
+    if results:
+        peak = max(results, key=lambda x: x[2])
+        print(f"\nPeak Year: {peak[0]} - {int(peak[2])} minutes")
+    return results
+
+def print_hourly(conn):
+    """
+    Prints hour-of-day listening patterns (plays + minutes for each hour).
+    """
+    cur = conn.cursor()
+    cur.execute('''
+        SELECT CAST(strftime('%H', ts) AS INTEGER) AS hour, COUNT(*), SUM(ms_played) / 60000 AS minutes
+        FROM plays
+        WHERE ts IS NOT NULL
+        GROUP BY hour
+        ORDER BY hour
+    ''')
+    results = cur.fetchall()
+    print("Hour-of-Day Listening Patterns:")
+    for hour, count, minutes in results:
+        print(f"{hour:02d}:00 - {hour:02d}:59 - {count} plays, {int(minutes)} minutes")
+    
+    # Show peak hour
+    if results:
+        peak = max(results, key=lambda x: x[2])
+        print(f"\nPeak Hour: {peak[0]:02d}:00 - {peak[0]:02d}:59 - {int(peak[2])} minutes")
+    return results
+
+def print_insights(conn):
+    """
+    Prints insights from trend analysis.
+    """
+    trend = get_yearly_trend(conn)
+    print("Listening Insights:")
+    if "insights" in trend and trend["insights"]:
+        for idx, insight in enumerate(trend["insights"], 1):
+            print(f"{idx}. {insight}")
+    
+    if "trend_segments" in trend and trend["trend_segments"]:
+        print("\nTrend Segments:")
+        for segment_type, period in trend["trend_segments"].items():
+            print(f"  {segment_type.capitalize()}: {period}")
+    
+    if "trend" in trend:
+        print(f"\nOverall Trend: {trend['trend'].capitalize()}")
+    
+    if "data_confidence" in trend:
+        print(f"Data Confidence: {trend['data_confidence'].capitalize()}")
+    
+    if "flags" in trend and trend["flags"]:
+        print("\nFlags:")
+        for flag in trend["flags"]:
+            print(f"  • {flag}")
+    
+    return trend
