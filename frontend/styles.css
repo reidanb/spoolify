@@ -328,6 +328,27 @@ button.ghost {
   line-height: 1.5;
 }
 
+.status-message {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.status-steps {
+  margin: 0;
+  padding-left: 1.1rem;
+  color: #455166;
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.button-hint {
+  margin: 0.25rem 0 0;
+  color: #617086;
+  font-size: 0.86rem;
+  font-family: "IBM Plex Mono", monospace;
+  line-height: 1.4;
+}
+
 .status-pill {
   min-width: 86px;
   padding: 0.4rem 0.7rem;
