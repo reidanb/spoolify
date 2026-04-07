@@ -74,7 +74,7 @@
           <div id="validation-pill" class="status-pill">Idle</div>
           <div class="status-copy">
             <strong id="validation-title">Choose a ZIP to begin validation</strong>
-            <p id="validation-message">Spoolify will inspect the archive structure, timespan, and recommended import mode.</p>
+            <div id="validation-message" class="status-message"></div>
           </div>
         </div>
         <div id="validation-results" class="result-grid" aria-live="polite"></div>
@@ -87,6 +87,7 @@
           <button id="validate-zip-btn" type="button" class="ghost">Re-run Validation</button>
           <button id="to-step-4" type="button" disabled>Review Import Options</button>
         </div>
+        <p id="continue-hint" class="button-hint hidden"></p>
       </section>
 
       <section class="step hidden" data-step="4">
@@ -101,7 +102,7 @@
           <div id="import-pill" class="status-pill">Ready</div>
           <div class="status-copy">
             <strong id="import-title">Validation complete</strong>
-            <p id="import-message">Choose the recommended mode or adjust it if you know this archive should be imported differently.</p>
+            <div id="import-message" class="status-message"></div>
           </div>
         </div>
         <div id="import-results" class="result-grid" aria-live="polite"></div>
@@ -122,7 +123,7 @@
           <div id="done-pill" class="status-pill">Done</div>
           <div class="status-copy">
             <strong id="done-title">Import finished</strong>
-            <p id="done-status-message">Spoolify imported the archive and prepared your local analytics data.</p>
+            <div id="done-status-message" class="status-message"></div>
           </div>
         </div>
         <div id="done-results" class="result-grid" aria-live="polite"></div>
