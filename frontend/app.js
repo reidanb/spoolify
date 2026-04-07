@@ -34,10 +34,81 @@ const donePill = document.getElementById("done-pill");
 const doneTitle = document.getElementById("done-title");
 const doneStatusMessage = document.getElementById("done-status-message");
 const doneResults = document.getElementById("done-results");
+const continueHint = document.getElementById("continue-hint");
 
 let currentStep = 1;
 let validationPassed = false;
 let validationRequestId = 0;
+
+const VALIDATION_FAILURES = [
+  {
+    test: (s) => /no \.json files|no json files/i.test(s),
+    title: "Validation failed — import is blocked",
+    message: "No Spotify streaming history files were found in this archive.",
+    steps: [
+      "Make sure you uploaded the Spotify Extended Streaming History export, not an account-info export.",
+      "The archive should contain files named like Streaming_History_Audio_*.json.",
+      "If Spotify is still preparing your export, wait and try again later.",
+    ],
+  },
+  {
+    test: (s) => /codec can.t decode|utf-?8.*decode|decode.*byte/i.test(s),
+    title: "Validation failed — archive may be corrupted",
+    message: "One or more files in the archive could not be read.",
+    steps: [
+      "Re-download your Spotify export and try the fresh ZIP.",
+      "Use the original ZIP without re-saving or extracting and re-compressing files inside it.",
+      "Avoid opening the JSON files in spreadsheet editors or text editors before import.",
+    ],
+  },
+  {
+    test: (s) => /no valid entries|no usable|no importable/i.test(s),
+    title: "Validation failed — no usable history found",
+    message: "The archive was read but contained no importable playback history.",
+    steps: [
+      "The uploaded archive may not contain Extended Streaming History data.",
+      "Try a different or fresher Spotify export ZIP.",
+      "Re-run validation after downloading a fresh export.",
+    ],
+  },
+  {
+    test: (s) => /too large|exceeds.*limit|size limit|zip bomb/i.test(s),
+    title: "Validation failed — archive rejected",
+    message: "The ZIP archive was too large or exceeded entry limits and was not processed.",
+    steps: [
+      "Check that the ZIP is a standard Spotify export and not an unrelated archive.",
+      "If the export is very large, contact support or use the directory import option.",
+    ],
+  },
+];
+
+function classifyValidationError(detail) {
+  const text = String(detail || "");
+  for (const failure of VALIDATION_FAILURES) {
+    if (failure.test(text)) {
+      return failure;
+    }
+  }
+  return {
+    title: "Validation failed — import is blocked",
+    message: detail || "The archive could not be validated.",
+    steps: [
+      "Check that the file is a Spotify Extended Streaming History export ZIP.",
+      "Re-download the export and try again.",
+    ],
+  };
+}
+
+function setContinueHint(text) {
+  if (!continueHint) return;
+  if (text) {
+    continueHint.textContent = text;
+    continueHint.classList.remove("hidden");
+  } else {
+    continueHint.textContent = "";
+    continueHint.classList.add("hidden");
+  }
+}
 
 function formatMode(mode) {
   const labels = {
@@ -137,7 +208,22 @@ function setStatusBanner(container, pill, titleNode, messageNode, state) {
   pill.textContent = state.label;
   pill.classList.toggle("is-loading", state.loading === true);
   titleNode.textContent = state.title;
-  messageNode.textContent = state.message;
+  clearNode(messageNode);
+  if (state.message) {
+    const p = document.createElement("p");
+    p.textContent = state.message;
+    messageNode.appendChild(p);
+  }
+  if (Array.isArray(state.steps) && state.steps.length > 0) {
+    const stepsList = document.createElement("ul");
+    stepsList.className = "status-steps";
+    state.steps.forEach((step) => {
+      const li = document.createElement("li");
+      li.textContent = step;
+      stepsList.appendChild(li);
+    });
+    messageNode.appendChild(stepsList);
+  }
 }
 
 function clearNode(node) {
@@ -182,6 +268,21 @@ function renderValidationResults(payload) {
     ])
   );
 
+  const MODE_CONSEQUENCES = {
+    historical_backfill: [
+      "All entries in the archive will be processed; exact duplicates are silently skipped.",
+      "Suitable for a first-time full import or re-importing the same archive.",
+    ],
+    ongoing_sync_prep: [
+      "Only plays not already in the database will be added; older duplicates are skipped.",
+      "Use this to top up your database with a newer Spotify export.",
+    ],
+  };
+  const modeConsequences = MODE_CONSEQUENCES[payload.recommended_mode] || [];
+  if (modeConsequences.length > 0) {
+    validationResults.appendChild(createIssueSection("What this means", modeConsequences));
+  }
+
   if (Array.isArray(payload.account_export_markers_found) && payload.account_export_markers_found.length > 0) {
     validationResults.appendChild(
       createIssueSection("Archive markers", payload.account_export_markers_found)
@@ -205,6 +306,10 @@ function classifyImport(payload) {
       label: "No-op",
       title: "Archive already imported",
       message: "No new rows were inserted because this archive is already present in the database.",
+      steps: [
+        "If you expected new data, make sure you uploaded the correct export.",
+        "Try a newer Spotify export ZIP to add more recent listening history.",
+      ],
       doneMessage: "This import finished successfully, but it did not add new rows because the same playback history was already stored locally.",
     };
   }
@@ -214,7 +319,12 @@ function classifyImport(payload) {
       tone: "warning",
       label: "Partial",
       title: "Import completed with skipped records",
-      message: "New listening history was added, but some rows were skipped because they had no Spotify track URI.",
+      message: "New listening history was added, but some records were skipped.",
+      steps: [
+        "Skipped entries had no Spotify track URI and cannot be matched to a track.",
+        "This is normal for some types of Spotify data (for example, podcast plays).",
+        "No action is needed; your listening history is otherwise complete.",
+      ],
       doneMessage: "Spoolify added new listening history and flagged a smaller set of records as unimportable.",
     };
   }
@@ -234,6 +344,9 @@ function classifyImport(payload) {
     label: "Complete",
     title: "Import finished",
     message: "The archive was processed successfully.",
+    steps: [
+      "If you expected new data, check that you uploaded the correct archive.",
+    ],
     doneMessage: "The archive was processed and Spoolify is ready for the next step.",
   };
 }
@@ -320,13 +433,18 @@ async function validateSelectedZip({ moveToValidation = false } = {}) {
     }
 
     if (!response.ok) {
+      const classified = classifyValidationError(data.detail);
       setStatusBanner(validationStatus, validationPill, validationTitle, validationMessage, {
         tone: "error",
         label: "Blocked",
-        title: "Validation failed",
-        message: data.detail || "The archive could not be validated.",
+        title: classified.title,
+        message: classified.message,
+        steps: classified.steps,
       });
-      renderValidationResults({ issues: [data.detail || "Validation failed."] });
+      validationTechnical.textContent = JSON.stringify(data, null, 2);
+      validationDetails.classList.remove("hidden");
+      renderValidationResults(null);
+      setContinueHint("Resolve the issue above before continuing.");
       return;
     }
 
@@ -340,9 +458,15 @@ async function validateSelectedZip({ moveToValidation = false } = {}) {
       setStatusBanner(validationStatus, validationPill, validationTitle, validationMessage, {
         tone: "warning",
         label: "Blocked",
-        title: "Wrong Spotify export type",
-        message: "This ZIP looks like an account-info export. Spoolify imports only Extended Streaming History JSON files.",
+        title: "Wrong Spotify export type — import is blocked",
+        message: "This ZIP looks like an account-info export, not an Extended Streaming History export.",
+        steps: [
+          "Request an Extended Streaming History export from your Spotify privacy settings.",
+          "The correct archive contains files named like Streaming_History_Audio_*.json.",
+          "Account-info exports contain different files such as yourlibrary.json or playlists.json.",
+        ],
       });
+      setContinueHint("Upload an Extended Streaming History archive to continue.");
       return;
     }
 
@@ -350,8 +474,13 @@ async function validateSelectedZip({ moveToValidation = false } = {}) {
       setStatusBanner(validationStatus, validationPill, validationTitle, validationMessage, {
         tone: "warning",
         label: "Review",
-        title: "Validation completed with issues",
-        message: "The archive was read, but you should review the flagged issues before importing.",
+        title: "Validation completed with issues — safe to continue",
+        message: "The archive was read successfully. Review the flagged issues below before importing.",
+        steps: [
+          "Missing track URIs are normal for some Spotify data and can be ignored.",
+          "If many files are flagged, re-download the export and try again.",
+          "You can continue to import; affected records will be skipped automatically.",
+        ],
       });
     } else {
       setStatusBanner(validationStatus, validationPill, validationTitle, validationMessage, {
@@ -361,6 +490,7 @@ async function validateSelectedZip({ moveToValidation = false } = {}) {
         message: "Validation completed successfully. Review the recommendation, then continue to import.",
       });
     }
+    setContinueHint("");
 
     validationPassed = true;
     reviewImportBtn.disabled = false;
@@ -377,10 +507,18 @@ async function validateSelectedZip({ moveToValidation = false } = {}) {
     setStatusBanner(validationStatus, validationPill, validationTitle, validationMessage, {
       tone: "error",
       label: "Error",
-      title: "Validation error",
-      message: `Unable to validate the ZIP archive: ${error}`,
+      title: "Validation error — import is blocked",
+      message: "Spoolify could not reach the validation service.",
+      steps: [
+        "Check that the Spoolify server is still running.",
+        "Reload the page and try again.",
+        "If the problem persists, restart the server with: python entrypoint.py serve",
+      ],
     });
-    renderValidationResults({ issues: [`ZIP validation error: ${error}`] });
+    validationTechnical.textContent = String(error);
+    validationDetails.classList.remove("hidden");
+    renderValidationResults(null);
+    setContinueHint("Fix the connection error above before continuing.");
   }
 }
 
@@ -417,6 +555,7 @@ function resetFlow() {
   validationPassed = false;
   validationRequestId += 1;
   reviewImportBtn.disabled = true;
+  setContinueHint("");
   stepTwoContinueBtn.disabled = true;
   zipInput.value = "";
   zipSelected.textContent = "No ZIP selected.";
@@ -520,8 +659,13 @@ importZipBtn.addEventListener("click", async () => {
       setStatusBanner(importStatus, importPill, importTitle, importMessage, {
         tone: "error",
         label: "Error",
-        title: "Import failed",
-        message: data.detail || "ZIP import failed.",
+        title: "Import failed — archive could not be processed",
+        message: data.detail || "One or more files in the archive could not be read.",
+        steps: [
+          "Re-download your Spotify export and try the fresh ZIP.",
+          "Use the original ZIP without modifying or re-saving any files inside it.",
+          "Re-run validation before importing again.",
+        ],
       });
       importTechnical.textContent = JSON.stringify(data, null, 2);
       importDetails.classList.remove("hidden");
@@ -539,9 +683,15 @@ importZipBtn.addEventListener("click", async () => {
     setStatusBanner(importStatus, importPill, importTitle, importMessage, {
       tone: "error",
       label: "Error",
-      title: "Import error",
-      message: `ZIP import error: ${error}`,
+      title: "Import error — archive could not be processed",
+      message: "Spoolify was unable to complete the import.",
+      steps: [
+        "Check that the Spoolify server is still running.",
+        "Try re-running the import from the beginning.",
+      ],
     });
+    importTechnical.textContent = String(error);
+    importDetails.classList.remove("hidden");
   }
 });
 
