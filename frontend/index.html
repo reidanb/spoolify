@@ -15,69 +15,122 @@
 
   <main class="page">
     <header class="hero reveal">
-      <p class="eyebrow">Phase 7 Onboarding</p>
+      <img class="brand-logo" src="/frontend/logo.png" alt="Spoolify logo" />
+      <p class="eyebrow">Onboarding</p>
       <h1>Bring your Spotify history into Spoolify</h1>
-      <p class="subtitle">One guided step at a time: welcome, choose ZIP, validate archive, import if valid.</p>
+      <p class="subtitle">Import your full listening history once, then explore local stats, trends, and wrapped-style summaries without sending your data anywhere else.</p>
     </header>
 
     <section class="panel wizard reveal">
       <div class="progress" aria-label="Onboarding progress">
-        <div class="step-indicator active" data-step-indicator="1">1 Welcome</div>
-        <div class="step-indicator" data-step-indicator="2">2 Choose ZIP</div>
-        <div class="step-indicator" data-step-indicator="3">3 Validate</div>
-        <div class="step-indicator" data-step-indicator="4">4 Import</div>
-        <div class="step-indicator" data-step-indicator="5">5 Done</div>
+        <div class="step-indicator current" data-step-indicator="1">1 Welcome</div>
+        <div class="step-indicator upcoming" data-step-indicator="2">2 Choose ZIP</div>
+        <div class="step-indicator upcoming" data-step-indicator="3">3 Validate</div>
+        <div class="step-indicator upcoming" data-step-indicator="4">4 Import</div>
+        <div class="step-indicator upcoming" data-step-indicator="5">5 Done</div>
       </div>
 
       <section class="step" data-step="1">
-        <h2>Welcome</h2>
-        <p>Spoolify currently imports only <strong>Extended Streaming History</strong> JSON data. If your ZIP is an account-info export, we will flag it before import.</p>
-        <p class="meta">Privacy-first note: your data stays local on your machine.</p>
+        <h2 tabindex="-1">Welcome</h2>
+        <p class="lede">Turn a Spotify export ZIP into a searchable local history you can actually use.</p>
+        <div class="cards">
+          <article class="card">
+            <h3>Full-history analysis</h3>
+            <p>Import years of listening data once and keep it available for repeat analysis on your own machine.</p>
+          </article>
+          <article class="card">
+            <h3>Stats and wrapped-style summaries</h3>
+            <p>Generate top artists, listening trends, yearly summaries, and other long-range views from the same archive.</p>
+          </article>
+          <article class="card">
+            <h3>Privacy-first by default</h3>
+            <p>Your archive stays local. Spoolify reads the ZIP, imports the data, and leaves the rest on your device.</p>
+          </article>
+        </div>
+        <p class="meta">Spoolify imports only Extended Streaming History JSON. If the ZIP is an account-info export, validation will stop before import.</p>
         <button id="start-btn" type="button">Start Walkthrough</button>
       </section>
 
       <section class="step hidden" data-step="2">
-        <h2>Select ZIP</h2>
+        <h2 tabindex="-1">Select ZIP</h2>
         <label for="archive-zip">Choose your Spotify export ZIP file</label>
+        <p class="helper-copy">Expected file: a Spotify export ZIP that contains <strong>Extended Streaming History</strong> JSON files. Account-info exports are not the right format for import.</p>
         <input id="archive-zip" name="archive-zip" type="file" accept=".zip,application/zip" />
         <p id="zip-selected" class="meta">No ZIP selected.</p>
+        <details class="help-toggle">
+          <summary>How do I get this?</summary>
+          <p>Request your Spotify data export, then choose the delivered ZIP that includes Extended Streaming History JSON files. This can become a dedicated help modal or link later without changing the wizard flow.</p>
+        </details>
         <div class="button-row">
           <button id="to-step-1" type="button" class="ghost">Back</button>
-          <button id="to-step-3" type="button" disabled>Continue</button>
+          <button id="to-step-3" type="button" disabled>Continue to Validation</button>
         </div>
       </section>
 
       <section class="step hidden" data-step="3">
-        <h2>Validate ZIP</h2>
-        <p>We will sample files and check that this is Extended Streaming History.</p>
+        <h2 tabindex="-1">Validate ZIP</h2>
+        <p>Validation starts automatically after ZIP selection. Review the archive summary and import recommendation before continuing.</p>
+        <div id="validation-status" class="status-banner neutral" aria-live="polite">
+          <div id="validation-pill" class="status-pill">Idle</div>
+          <div class="status-copy">
+            <strong id="validation-title">Choose a ZIP to begin validation</strong>
+            <p id="validation-message">Spoolify will inspect the archive structure, timespan, and recommended import mode.</p>
+          </div>
+        </div>
+        <div id="validation-results" class="result-grid" aria-live="polite"></div>
+        <details id="validation-details" class="technical-details hidden">
+          <summary>Technical details</summary>
+          <pre id="validation-technical" class="output"></pre>
+        </details>
         <div class="button-row">
           <button id="to-step-2" type="button" class="ghost">Back</button>
-          <button id="validate-zip-btn" type="button">Run Validation</button>
-        </div>
-        <pre id="validate-output" class="output" aria-live="polite">Validation not started.</pre>
-        <div class="button-row">
-          <button id="to-step-4" type="button" disabled>Continue to Import</button>
+          <button id="validate-zip-btn" type="button" class="ghost">Re-run Validation</button>
+          <button id="to-step-4" type="button" disabled>Review Import Options</button>
         </div>
       </section>
 
       <section class="step hidden" data-step="4">
-        <h2>Import</h2>
+        <h2 tabindex="-1">Import</h2>
+        <p>Confirm the suggested mode, then start the import. Spoolify will keep duplicates out of the database automatically.</p>
         <label for="import-mode">Import mode</label>
         <select id="import-mode" name="import-mode">
           <option value="historical_backfill">Historical backfill (first-time full import)</option>
           <option value="ongoing_sync_prep">Ongoing sync prep (recent top-up)</option>
         </select>
+        <div id="import-status" class="status-banner neutral" aria-live="polite">
+          <div id="import-pill" class="status-pill">Ready</div>
+          <div class="status-copy">
+            <strong id="import-title">Validation complete</strong>
+            <p id="import-message">Choose the recommended mode or adjust it if you know this archive should be imported differently.</p>
+          </div>
+        </div>
+        <div id="import-results" class="result-grid" aria-live="polite"></div>
+        <details id="import-details" class="technical-details hidden">
+          <summary>Technical details</summary>
+          <pre id="import-technical" class="output"></pre>
+        </details>
         <div class="button-row">
           <button id="to-step-3b" type="button" class="ghost">Back</button>
           <button id="import-zip-btn" type="button">Start Import</button>
         </div>
-        <pre id="import-output" class="output" aria-live="polite">Import not started.</pre>
       </section>
 
       <section class="step hidden" data-step="5">
-        <h2>Done</h2>
-        <p>Import completed. You can now use API analytics endpoints and wrapped summaries.</p>
-        <pre id="done-output" class="output" aria-live="polite">Awaiting import summary.</pre>
+        <h2 tabindex="-1">Import Complete</h2>
+        <p id="done-message">Your listening history is ready to explore locally.</p>
+        <div id="done-status" class="status-banner success" aria-live="polite">
+          <div id="done-pill" class="status-pill">Done</div>
+          <div class="status-copy">
+            <strong id="done-title">Import finished</strong>
+            <p id="done-status-message">Spoolify imported the archive and prepared your local analytics data.</p>
+          </div>
+        </div>
+        <div id="done-results" class="result-grid" aria-live="polite"></div>
+        <div class="action-row">
+          <a class="action-link" href="/stats" target="_blank" rel="noreferrer">View Stats</a>
+          <a class="action-link" href="/wrapped" target="_blank" rel="noreferrer">View Wrapped</a>
+          <a class="action-link ghost-link" href="/docs" target="_blank" rel="noreferrer">Open API Docs</a>
+        </div>
         <button id="restart-btn" type="button">Run Another Import</button>
       </section>
     </section>

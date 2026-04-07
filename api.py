@@ -30,6 +30,8 @@ app = FastAPI(
     version="1.0.0"
 )
 
+API_SCHEMA_VERSION = "2.0.0"
+
 # ZIP safety limits for onboarding uploads.
 MAX_ZIP_UPLOAD_BYTES = 200 * 1024 * 1024
 MAX_ZIP_ENTRIES = 2000
@@ -97,6 +99,7 @@ class HourlyEntry(BaseModel):
 
 class OverallStats(BaseModel):
     total_minutes: int
+    total_minutes_exact: float
     total_hours: float
     total_plays: int
 
@@ -118,6 +121,7 @@ class ListeningProfile(BaseModel):
     skew: Optional[str] = None
     very_low_night: Optional[bool] = None
     total_minutes: Optional[float] = None
+    total_minutes_exact: Optional[float] = None
 
 
 class HealthResponse(BaseModel):
@@ -139,6 +143,24 @@ class ArchivePathRequest(BaseModel):
 class OnboardingImportRequest(BaseModel):
     path: str
     mode: str = "historical_backfill"
+
+
+def _generated_at_utc() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _with_meta(data: Any, year: Optional[Any] = None, **extra_meta: Any) -> Dict[str, Any]:
+    meta: Dict[str, Any] = {
+        "generated_at": _generated_at_utc(),
+        "schema_version": API_SCHEMA_VERSION,
+    }
+    if year is not None:
+        meta["year"] = str(year)
+    meta.update(extra_meta)
+    return {
+        "meta": meta,
+        "data": data,
+    }
 
 
 def _discover_json_files(input_path: str) -> List[Path]:
@@ -564,7 +586,7 @@ def health():
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
 
-@app.get("/stats", response_model=StatsResponse)
+@app.get("/stats")
 def stats():
     """Get comprehensive listening statistics."""
     try:
@@ -579,7 +601,7 @@ def stats():
         conn.close()
         
         # Format response
-        return {
+        payload = {
             "overall": overall,
             "profile": profile,
             "top_artists": [
@@ -591,11 +613,12 @@ def stats():
                 for track, artist, minutes in top_tracks_data
             ]
         }
+        return _with_meta(payload)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
 
 
-@app.get("/top-artists", response_model=List[Artist])
+@app.get("/top-artists")
 def top_artists(limit: int = Query(10, ge=1, le=100)):
     """Get top artists by listening time."""
     try:
@@ -604,12 +627,13 @@ def top_artists(limit: int = Query(10, ge=1, le=100)):
         data = get_top_artists(conn, limit=limit)
         conn.close()
         
-        return [{"name": artist, "minutes": int(minutes)} for artist, minutes in data]
+        payload = [{"name": artist, "minutes": int(minutes)} for artist, minutes in data]
+        return _with_meta(payload)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
 
 
-@app.get("/top-tracks", response_model=List[Track])
+@app.get("/top-tracks")
 def top_tracks(limit: int = Query(10, ge=1, le=100)):
     """Get top tracks by listening time."""
     try:
@@ -618,16 +642,17 @@ def top_tracks(limit: int = Query(10, ge=1, le=100)):
         data = get_top_tracks(conn, limit=limit)
         conn.close()
         
-        return [
+        payload = [
             {"name": track, "artist": artist, "minutes": int(minutes)}
             for track, artist, minutes in data
         ]
+        return _with_meta(payload)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
 
 
 @app.get("/monthly")
-def monthly() -> List[MonthlyEntry]:
+def monthly() -> Dict[str, Any]:
     """Get monthly listening statistics."""
     try:
         conn = get_connection()
@@ -635,16 +660,17 @@ def monthly() -> List[MonthlyEntry]:
         data = get_monthly_stats(conn)
         conn.close()
         
-        return [
+        payload = [
             {"month": month, "plays": plays, "minutes": int(minutes)}
             for month, plays, minutes in data
         ]
+        return _with_meta(payload)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
 
 
 @app.get("/yearly")
-def yearly() -> List[YearlyEntry]:
+def yearly() -> Dict[str, Any]:
     """Get yearly listening statistics."""
     try:
         conn = get_connection()
@@ -652,16 +678,17 @@ def yearly() -> List[YearlyEntry]:
         data = get_yearly_stats(conn)
         conn.close()
         
-        return [
+        payload = [
             {"year": year, "plays": plays, "minutes": int(minutes)}
             for year, plays, minutes in data
         ]
+        return _with_meta(payload)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
 
 
 @app.get("/hourly")
-def hourly() -> List[HourlyEntry]:
+def hourly() -> Dict[str, Any]:
     """Get hour-of-day listening statistics."""
     try:
         conn = get_connection()
@@ -669,10 +696,11 @@ def hourly() -> List[HourlyEntry]:
         data = get_hourly_stats(conn)
         conn.close()
         
-        return [
+        payload = [
             {"hour": hour, "plays": plays, "minutes": int(minutes)}
             for hour, plays, minutes in data
         ]
+        return _with_meta(payload)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
 
@@ -685,7 +713,7 @@ def trends() -> Dict[str, Any]:
         init_db(conn)
         data = get_yearly_trend(conn)
         conn.close()
-        return data
+        return _with_meta(data)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
 
@@ -703,7 +731,8 @@ def wrapped(year: Optional[int] = Query(None, description="Specific year to anal
         if "error" in data:
             raise HTTPException(status_code=404, detail=data["error"])
         
-        return data
+        wrapped_year = data.get("year") if isinstance(data, dict) else year
+        return _with_meta(data, year=wrapped_year)
     except HTTPException:
         raise
     except Exception as e:
