@@ -352,6 +352,7 @@ def get_listening_profile(conn):
         "skew": skew,
         "very_low_night": very_low_night,
         "total_minutes": total_minutes,
+        "total_minutes_exact": total_minutes,
     }
 
 def print_stats(conn):

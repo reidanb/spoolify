@@ -77,6 +77,7 @@ def get_overall_stats(conn):
     cur.execute('SELECT SUM(ms_played) FROM plays')
     total_ms = cur.fetchone()[0] or 0
     total_minutes = int(total_ms // 60000)
+    total_minutes_exact = total_ms / 60000.0
     total_hours = total_minutes / 60
     
     cur.execute('SELECT COUNT(*) FROM plays')
@@ -84,6 +85,7 @@ def get_overall_stats(conn):
     
     return {
         "total_minutes": total_minutes,
+        "total_minutes_exact": total_minutes_exact,
         "total_hours": round(total_hours, 1),
         "total_plays": total_plays
     }
