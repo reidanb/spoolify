@@ -93,31 +93,68 @@ GET /stats
 
 Returns comprehensive statistics including overall listening time, listening profile, and top artists/tracks.
 
+All analytics endpoints now return a stable envelope:
+- `meta.generated_at` (UTC ISO timestamp)
+- `meta.schema_version` (compatibility-sensitive response schema version; `2.x` uses the `meta` + `data` envelope)
+- `data` (endpoint payload)
+
+Compatibility expectations:
+- `meta.schema_version` follows compatibility semantics for response shape and field contract.
+- Additive fields may appear in minor updates; existing fields keep meaning within a major version.
+- Breaking field renames/removals are reserved for a major version.
+
+Field semantics for `/stats`:
+- `data.overall.total_minutes`: integer convenience total (rounded down from milliseconds)
+- `data.overall.total_minutes_exact`: precise total minutes from raw milliseconds
+- `data.overall.total_hours`: derived convenience field from `overall.total_minutes`, rounded to 1 decimal
+- `data.profile.total_minutes_exact`: canonical precise total minutes for profile context
+- `data.profile.total_minutes`: compatibility alias for `profile.total_minutes_exact` (deprecated; do not use for new clients)
+- `top_artists[].name` and `top_tracks[].name` are intentionally kept for compatibility
+
 **Response:**
 ```json
 {
-  "overall": {
-    "total_minutes": 278199,
-    "total_hours": 4636.6,
-    "total_plays": 166140
+  "meta": {
+    "generated_at": "2026-04-07T09:15:23.123456+00:00",
+    "schema_version": "2.0.0"
   },
-  "profile": {
-    "night": 4.4,
-    "morning": 17.6,
-    "afternoon": 44.2,
-    "evening": 33.8,
-    "primary_profile": "afternoon",
-    "primary_pct": 44.2,
-    "peak_hour": 15,
-    "confidence": "high"
-  },
-  "top_artists": [
-    {"name": "Eminem", "minutes": 4186},
-    {"name": "The Smiths", "minutes": 3117}
-  ],
-  "top_tracks": [
-    {"name": "The Suburbs", "artist": "Arcade Fire", "minutes": 615}
-  ]
+  "data": {
+    "overall": {
+      "total_minutes": 278199,
+      "total_minutes_exact": 278199.47235,
+      "total_hours": 4636.6,
+      "total_plays": 166140
+    },
+    "profile": {
+      "bucket_minutes": {
+        "night": 12141.9719333333,
+        "morning": 49060.8814833333,
+        "afternoon": 122971.165066667,
+        "evening": 94025.4538666667
+      },
+      "bucket_pct": {
+        "night": 4.36448417057299,
+        "morning": 17.6351454116384,
+        "afternoon": 44.2025155647879,
+        "evening": 33.7978548530007
+      },
+      "primary_profile": "afternoon",
+      "primary_pct": 44.2025155647879,
+      "peak_hour": 15,
+      "confidence": "high",
+      "skew": "balanced",
+      "very_low_night": true,
+      "total_minutes_exact": 278199.47235,
+      "total_minutes": 278199.47235
+    },
+    "top_artists": [
+      {"name": "Eminem", "minutes": 4186},
+      {"name": "The Smiths", "minutes": 3117}
+    ],
+    "top_tracks": [
+      {"name": "The Suburbs", "artist": "Arcade Fire", "minutes": 615}
+    ]
+  }
 }
 ```
 
@@ -132,11 +169,17 @@ GET /top-artists?limit=10
 
 **Response:**
 ```json
-[
-  {"name": "Eminem", "minutes": 4186},
-  {"name": "The Smiths", "minutes": 3117},
-  {"name": "Skepta", "minutes": 2863}
-]
+{
+  "meta": {
+    "generated_at": "2026-04-07T09:15:23.123456+00:00",
+    "schema_version": "2.0.0"
+  },
+  "data": [
+    {"name": "Eminem", "minutes": 4186},
+    {"name": "The Smiths", "minutes": 3117},
+    {"name": "Skepta", "minutes": 2863}
+  ]
+}
 ```
 
 ### Top Tracks
@@ -150,10 +193,16 @@ GET /top-tracks?limit=10
 
 **Response:**
 ```json
-[
-  {"name": "The Suburbs", "artist": "Arcade Fire", "minutes": 615},
-  {"name": "Redbone", "artist": "Childish Gambino", "minutes": 558}
-]
+{
+  "meta": {
+    "generated_at": "2026-04-07T09:15:23.123456+00:00",
+    "schema_version": "2.0.0"
+  },
+  "data": [
+    {"name": "The Suburbs", "artist": "Arcade Fire", "minutes": 615},
+    {"name": "Redbone", "artist": "Childish Gambino", "minutes": 558}
+  ]
+}
 ```
 
 ### Monthly Statistics
@@ -166,10 +215,16 @@ Returns monthly listening stats (plays and minutes per month).
 
 **Response:**
 ```json
-[
-  {"month": "2019-01", "plays": 4585, "minutes": 7067},
-  {"month": "2019-02", "plays": 3949, "minutes": 6995}
-]
+{
+  "meta": {
+    "generated_at": "2026-04-07T09:15:23.123456+00:00",
+    "schema_version": "2.0.0"
+  },
+  "data": [
+    {"month": "2019-01", "plays": 4585, "minutes": 7067},
+    {"month": "2019-02", "plays": 3949, "minutes": 6995}
+  ]
+}
 ```
 
 ### Yearly Statistics
@@ -182,10 +237,16 @@ Returns yearly listening stats.
 
 **Response:**
 ```json
-[
-  {"year": "2018", "plays": 23682, "minutes": 32727},
-  {"year": "2019", "plays": 28088, "minutes": 42922}
-]
+{
+  "meta": {
+    "generated_at": "2026-04-07T09:15:23.123456+00:00",
+    "schema_version": "2.0.0"
+  },
+  "data": [
+    {"year": "2018", "plays": 23682, "minutes": 32727},
+    {"year": "2019", "plays": 28088, "minutes": 42922}
+  ]
+}
 ```
 
 ### Hourly Statistics
@@ -198,10 +259,16 @@ Returns hour-of-day listening patterns (0-23).
 
 **Response:**
 ```json
-[
-  {"hour": 0, "plays": 3490, "minutes": 5052},
-  {"hour": 1, "plays": 1841, "minutes": 2732}
-]
+{
+  "meta": {
+    "generated_at": "2026-04-07T09:15:23.123456+00:00",
+    "schema_version": "2.0.0"
+  },
+  "data": [
+    {"hour": 0, "plays": 3490, "minutes": 5052},
+    {"hour": 1, "plays": 1841, "minutes": 2732}
+  ]
+}
 ```
 
 ### Trends
@@ -215,24 +282,30 @@ Returns yearly trend analysis with growth/decline/recovery segments.
 **Response:**
 ```json
 {
-  "yearly_changes": {
-    "2016": {"change_pct": null, "change_minutes": null, "baseline": true},
-    "2017": {"change_pct": 195.2, "change_minutes": 10086}
+  "meta": {
+    "generated_at": "2026-04-07T09:15:23.123456+00:00",
+    "schema_version": "2.0.0"
   },
-  "peak_year": 2019,
-  "lowest_year": 2014,
-  "trend": "volatile",
-  "insights": [
-    "Listening peaked in 2019",
-    "Sharp decline between 2019–2021"
-  ],
-  "trend_segments": {
-    "growth": "2017–2019",
-    "decline": "2019–2021",
-    "recovery": "2022–2025"
-  },
-  "flags": ["possible_platform_switch"],
-  "data_confidence": "medium"
+  "data": {
+    "yearly_changes": {
+      "2016": {"change_pct": null, "change_minutes": null, "baseline": true},
+      "2017": {"change_pct": 195.2, "change_minutes": 10086}
+    },
+    "peak_year": 2019,
+    "lowest_year": 2014,
+    "trend": "volatile",
+    "insights": [
+      "Listening peaked in 2019",
+      "Sharp decline between 2019–2021"
+    ],
+    "trend_segments": {
+      "growth": "2017–2019",
+      "decline": "2019–2021",
+      "recovery": "2022–2025"
+    },
+    "flags": ["possible_platform_switch"],
+    "data_confidence": "medium"
+  }
 }
 ```
 
@@ -250,26 +323,33 @@ Returns yearly wrapped summary (like Spotify Wrapped).
 **Response:**
 ```json
 {
-  "year": 2019,
-  "total_minutes": 42922,
-  "total_plays": 28088,
-  "top_artists": [
-    {"artist": "Eminem", "minutes": 1200},
-    {"artist": "The Smiths", "minutes": 950}
-  ],
-  "top_tracks": [
-    {"track": "The Suburbs", "artist": "Arcade Fire", "minutes": 100}
-  ],
-  "peak_month": "01",
-  "peak_hour": 15,
-  "profile": {
-    "bucket_pct": {
-      "night": 4.4,
-      "morning": 17.6,
-      "afternoon": 44.2,
-      "evening": 33.8
-    },
-    "primary": "afternoon"
+  "meta": {
+    "generated_at": "2026-04-07T09:15:23.123456+00:00",
+    "schema_version": "2.0.0",
+    "year": "2019"
+  },
+  "data": {
+    "year": 2019,
+    "total_minutes": 42922,
+    "total_plays": 28088,
+    "top_artists": [
+      {"artist": "Eminem", "minutes": 1200},
+      {"artist": "The Smiths", "minutes": 950}
+    ],
+    "top_tracks": [
+      {"track": "The Suburbs", "artist": "Arcade Fire", "minutes": 100}
+    ],
+    "peak_month": "01",
+    "peak_hour": 15,
+    "profile": {
+      "bucket_pct": {
+        "night": 4.4,
+        "morning": 17.6,
+        "afternoon": 44.2,
+        "evening": 33.8
+      },
+      "primary": "afternoon"
+    }
   }
 }
 ```
@@ -489,3 +569,4 @@ print(response.json())
 ---
 
 For more information, see the main [README.md](../README.md) and [ROADMAP.md](../ROADMAP.md).
+
