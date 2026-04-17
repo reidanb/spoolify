@@ -101,6 +101,28 @@
             <p>The long view first, then the supporting patterns around time, artists, and tracks.</p>
           </div>
 
+          <!-- Date Range Slider -->
+          <div class="date-range-container">
+            <div class="date-range-header">
+              <label for="date-range-slider">Filter by Date Range</label>
+              <div class="date-range-buttons">
+                <button id="update-date-filter" class="btn btn-sm btn-primary" style="display: none;">Update Filter</button>
+                <button id="reset-date-filter" class="btn btn-sm btn-ghost">Reset</button>
+              </div>
+            </div>
+            <div class="date-range-slider-wrapper">
+              <input type="range" id="date-range-slider-start" class="date-range-slider date-range-slider-start" min="0" max="100" value="0" />
+              <input type="range" id="date-range-slider-end" class="date-range-slider date-range-slider-end" min="0" max="100" value="100" />
+              <div class="date-range-track"></div>
+              <div class="date-range-fill"></div>
+            </div>
+            <div class="date-range-labels">
+              <span id="date-range-start-label">—</span>
+              <span class="date-range-label-separator">to</span>
+              <span id="date-range-end-label">—</span>
+            </div>
+          </div>
+
         <div class="featured-chart-grid">
           <div class="chart-container chart-container-featured">
             <div class="chart-header">
