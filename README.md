@@ -238,6 +238,20 @@ Spoolify/
 
 ---
 
+## 🔒 Security
+
+Spoolify implements multi-layered security for archive imports and data handling:
+
+- **ZIP bomb protection**: Compression ratio validation, size limits, entry count checks
+- **Path security**: Directory traversal prevention, symlink blocking, encrypted entry rejection
+- **Data validation**: Required field checking, type coercion, deduplication via SHA256 hashing
+- **Account export detection**: Rejects non-streaming-history exports automatically
+- **Privacy-first**: No external API calls, all data stays local
+
+For detailed security documentation, see [docs/SECURITY.md](docs/SECURITY.md).
+
+---
+
 ## ⚠️ Disclaimer
 
 Spoolify is not affiliated with Spotify AB or any of its subsidiaries.
