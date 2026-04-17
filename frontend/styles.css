@@ -64,13 +64,6 @@ body {
   letter-spacing: -0.02em;
 }
 
-.brand-logo {
-  width: clamp(72px, 10vw, 120px);
-  height: auto;
-  display: block;
-  margin-bottom: 0.55rem;
-}
-
 .subtitle {
   max-width: 780px;
   font-size: 1.08rem;
@@ -107,7 +100,7 @@ body {
 
 .progress {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0.4rem;
   margin-bottom: 1rem;
 }
@@ -400,6 +393,10 @@ button.ghost {
   background: rgba(255, 255, 255, 0.62);
 }
 
+.result-section-full-width {
+  grid-column: 1 / -1;
+}
+
 .result-section h3 {
   margin: 0 0 0.7rem;
   font-size: 0.98rem;
@@ -467,6 +464,12 @@ button.ghost {
   gap: 0.6rem;
 }
 
+.done-panel {
+  display: grid;
+  gap: 0.8rem;
+  margin-top: 0.55rem;
+}
+
 .action-link {
   display: inline-flex;
   align-items: center;
@@ -532,10 +535,6 @@ button.ghost {
 @media (max-width: 720px) {
   .page {
     padding: 1rem 0.85rem 2.2rem;
-  }
-
-  .brand-logo {
-    margin-bottom: 0.6rem;
   }
 
   .hero h1 {
