@@ -12,7 +12,8 @@ This document describes the security features and practices implemented in Spool
 6. [Deduplication & Integrity](#deduplication--integrity)
 7. [Database Security](#database-security)
 8. [File Path Security](#file-path-security)
-9. [Known Limitations](#known-limitations)
+9. [Repository & Supply Chain Security](#repository--supply-chain-security)
+10. [Known Limitations](#known-limitations)
 
 ---
 
@@ -400,6 +401,52 @@ Directory imports also filter by extension:
 ```python
 json_files = [f for f in os.listdir(path) if f.lower().endswith('.json')]
 ```
+
+---
+
+## Repository & Supply Chain Security
+
+### Commit Signing
+
+All commits to the Spoolify repository are **cryptographically signed** using GPG (GNU Privacy Guard). This ensures:
+
+- **Authenticity**: Each commit is verifiable as coming from the maintainer.
+- **Non-repudiation**: The committer cannot deny having made changes.
+- **Tamper Detection**: Any modification to commit history is immediately detectable.
+
+**Verification:**
+You can verify the authenticity of commits by checking the GPG signature:
+
+```bash
+git log --show-signature
+```
+
+or for a specific commit:
+
+```bash
+git show --show-signature <commit-hash>
+```
+
+A valid signature appears as:
+```
+gpg: Signature made [date] [timezone]
+gpg:                using RSA key [KEY_ID]
+gpg: Good signature from "Maintainer Name <email>" [validity]
+```
+
+**Why This Matters:**
+- Prevents unauthorized code injection via compromised repository access.
+- Allows users to verify they are running code actually authored by the maintainer.
+- Demonstrates commitment to secure development practices.
+
+### Verification Best Practices
+
+When using Spoolify:
+
+1. **Clone from official source**: Use the official GitHub repository URL.
+2. **Verify signatures**: Run `git log --verify-signatures` before deploying.
+3. **Audit commits**: Review commit history and associated changes before trust.
+4. **Trust on first use**: Establish a baseline of trusted commits, then verify subsequent updates.
 
 ---
 
