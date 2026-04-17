@@ -1,5 +1,6 @@
 let dashboardData = null;
 let charts = {};
+let filteredData = null;
 
 const loadingState = document.getElementById("loading-state");
 const tabButtons = document.querySelectorAll(".tab-btn");
@@ -57,6 +58,73 @@ function setupEventListeners() {
       window.location.href = "/";
     });
   }
+
+  // Date range slider listeners
+  const sliderStart = document.getElementById("date-range-slider-start");
+  const sliderEnd = document.getElementById("date-range-slider-end");
+  const updateBtn = document.getElementById("update-date-filter");
+  const resetBtn = document.getElementById("reset-date-filter");
+
+  if (sliderStart && sliderEnd && updateBtn) {
+    // Track the current applied state
+    let appliedStart = Number(sliderStart.value);
+    let appliedEnd = Number(sliderEnd.value);
+
+    const checkForChanges = () => {
+      const currentStart = Number(sliderStart.value);
+      const currentEnd = Number(sliderEnd.value);
+      
+      // Show update button if values differ from applied state
+      if (currentStart !== appliedStart || currentEnd !== appliedEnd) {
+        updateBtn.style.display = "block";
+      } else {
+        updateBtn.style.display = "none";
+      }
+      
+      // Always update labels for preview
+      updateDateRangeLabels();
+      updateDateRangeFill();
+    };
+
+    sliderStart.addEventListener("input", () => {
+      if (Number(sliderStart.value) > Number(sliderEnd.value)) {
+        sliderStart.value = sliderEnd.value;
+      }
+      checkForChanges();
+    });
+
+    sliderEnd.addEventListener("input", () => {
+      if (Number(sliderEnd.value) < Number(sliderStart.value)) {
+        sliderEnd.value = sliderStart.value;
+      }
+      checkForChanges();
+    });
+
+    // Apply filter on button click
+    updateBtn.addEventListener("click", async () => {
+      appliedStart = Number(sliderStart.value);
+      appliedEnd = Number(sliderEnd.value);
+      await updateDateRangeFilter();
+      updateBtn.style.display = "none";
+    });
+
+    // Reset filter
+    if (resetBtn) {
+      resetBtn.addEventListener("click", () => {
+        const monthCount = dashboardData?.monthly?.length || 100;
+        sliderStart.value = 0;
+        sliderEnd.value = monthCount - 1;
+        appliedStart = 0;
+        appliedEnd = monthCount - 1;
+        updateBtn.style.display = "none";
+        updateDateRangeLabels();
+        updateDateRangeFill();
+
+        filteredData = null;
+        updateOverviewContent();
+      });
+    }
+  }
 }
 
 async function loadDashboard() {
@@ -89,6 +157,8 @@ async function loadDashboard() {
       topTracks: topTracks.data || [],
     };
 
+    filteredData = null;
+    initializeDateRangeSlider();
     renderOverviewTab();
     showLoading(false);
   } catch (error) {
@@ -116,21 +186,33 @@ function renderOverviewTab() {
     return;
   }
 
-  updateNarrative();
-  updateMetrics();
-  renderProfileBreakdown();
-  renderInsights();
-  createCharts();
-  renderTopArtistsTable();
-  renderTopTracksTable();
+  updateOverviewContent();
 }
 
-function updateNarrative() {
+function getActiveOverviewData() {
+  return filteredData || dashboardData;
+}
+
+function updateOverviewContent() {
+  const overview = getActiveOverviewData();
+  if (!overview) {
+    return;
+  }
+
+  updateNarrative(overview.summary || {});
+  updateMetrics(overview.summary || {});
+  renderProfileBreakdown(overview.summary?.profile || {});
+  renderInsights(overview.summary || {});
+  updateOverviewCharts(overview);
+  renderTopArtistsTable(overview.topArtists || []);
+  renderTopTracksTable(overview.topTracks || []);
+}
+
+function updateNarrative(summary) {
   if (!headerNarrative) {
     return;
   }
 
-  const summary = dashboardData.summary || {};
   const totals = summary.totals || {};
   const profile = summary.profile || {};
   const peaks = summary.peaks || {};
@@ -148,10 +230,10 @@ function updateNarrative() {
   headerNarrative.textContent = `${plays} plays logged locally, with listening centered around the ${dominantPeriod}.`;
 }
 
-function updateMetrics() {
-  const summary = dashboardData.summary || {};
-  const totals = summary.totals || {};
-  const profile = summary.profile || {};
+function updateMetrics(summary) {
+  const activeSummary = summary || getActiveOverviewData()?.summary || {};
+  const totals = activeSummary.totals || {};
+  const profile = activeSummary.profile || {};
   const dateRange = totals.date_range || {};
 
   setText("metric-plays", formatInteger(totals.total_plays || 0));
@@ -169,12 +251,12 @@ function updateMetrics() {
   );
 }
 
-function renderProfileBreakdown() {
+function renderProfileBreakdown(profile) {
   if (!profileBreakdown) {
     return;
   }
 
-  const bucketPct = dashboardData.summary?.profile?.bucket_pct || {};
+  const bucketPct = profile?.bucket_pct || {};
   profileBreakdown.innerHTML = "";
 
   PROFILE_ORDER.forEach((key) => {
@@ -191,13 +273,13 @@ function renderProfileBreakdown() {
   });
 }
 
-function renderInsights() {
+function renderInsights(summary) {
   const container = document.getElementById("insights-container");
   if (!container) {
     return;
   }
 
-  const items = buildNarrativeInsights(dashboardData.summary || {});
+  const items = buildNarrativeInsights(summary || {});
   container.innerHTML = "";
 
   items.forEach((insight) => {
@@ -280,23 +362,6 @@ function buildNarrativeInsights(summary) {
   return items.slice(0, 5);
 }
 
-function createCharts() {
-  createMonthlyChart(dashboardData.monthly || []);
-  createHourlyChart(dashboardData.hourly || []);
-  createProfileChart();
-  createYearlyChart(dashboardData.yearly || []);
-  createTopArtistsChart((dashboardData.topArtists || []).slice(0, 10));
-  createTopTracksChart((dashboardData.topTracks || []).slice(0, 10));
-}
-
-function refreshOverviewCharts() {
-  Object.values(charts).forEach((chart) => {
-    if (chart && chart.resize) {
-      chart.resize();
-    }
-  });
-}
-
 function createMonthlyChart(data) {
   const ctx = document.getElementById("chart-monthly")?.getContext("2d");
   if (!ctx) {
@@ -311,7 +376,7 @@ function createMonthlyChart(data) {
   const formattedLabels = data.map((entry) => {
     try {
       const date = new Date(entry.month + "-01");
-      return new Intl.DateTimeFormat("en-US", { month: "short", year: "2-digit" }).format(date);
+      return new Intl.DateTimeFormat("en-US", { month: "short", year: "numeric" }).format(date);
     } catch {
       return entry.month;
     }
@@ -375,13 +440,13 @@ function createHourlyChart(data) {
   });
 }
 
-function createProfileChart() {
+function createProfileChart(profile) {
   const ctx = document.getElementById("chart-profile")?.getContext("2d");
   if (!ctx) {
     return;
   }
 
-  const bucketPct = dashboardData.summary?.profile?.bucket_pct || {};
+  const bucketPct = profile?.bucket_pct || {};
   if (charts.profile) {
     charts.profile.destroy();
   }
@@ -483,14 +548,14 @@ function createTopTracksChart(data) {
   });
 }
 
-function renderTopArtistsTable() {
+function renderTopArtistsTable(data) {
   const tbody = document.getElementById("tbody-artists");
   if (!tbody) {
     return;
   }
 
   tbody.innerHTML = "";
-  (dashboardData.topArtists || []).forEach((artist, index) => {
+  (data || []).forEach((artist, index) => {
     const row = document.createElement("tr");
     row.innerHTML = `
       <td class="rank">${index + 1}</td>
@@ -501,14 +566,14 @@ function renderTopArtistsTable() {
   });
 }
 
-function renderTopTracksTable() {
+function renderTopTracksTable(data) {
   const tbody = document.getElementById("tbody-tracks");
   if (!tbody) {
     return;
   }
 
   tbody.innerHTML = "";
-  (dashboardData.topTracks || []).forEach((track, index) => {
+  (data || []).forEach((track, index) => {
     const row = document.createElement("tr");
     row.innerHTML = `
       <td class="rank">${index + 1}</td>
@@ -663,6 +728,182 @@ function setText(id, value) {
   if (node) {
     node.textContent = value;
   }
+}
+
+function initializeDateRangeSlider() {
+  if (!dashboardData || !dashboardData.monthly || dashboardData.monthly.length === 0) {
+    return;
+  }
+
+  const sliderStart = document.getElementById("date-range-slider-start");
+  const sliderEnd = document.getElementById("date-range-slider-end");
+
+  if (!sliderStart || !sliderEnd) {
+    return;
+  }
+
+  // Initialize slider to full range
+  sliderStart.max = dashboardData.monthly.length - 1;
+  sliderEnd.max = dashboardData.monthly.length - 1;
+  sliderEnd.value = dashboardData.monthly.length - 1;
+
+  updateDateRangeLabels();
+  updateDateRangeFill();
+}
+
+function updateDateRangeFill() {
+  if (!dashboardData || !dashboardData.monthly) {
+    return;
+  }
+
+  const fill = document.querySelector(".date-range-fill");
+  const sliderStart = document.getElementById("date-range-slider-start");
+  const sliderEnd = document.getElementById("date-range-slider-end");
+
+  if (!fill || !sliderStart || !sliderEnd) {
+    return;
+  }
+
+  const startIdx = Number(sliderStart.value);
+  const endIdx = Number(sliderEnd.value);
+
+  // Update fill position
+  const fillStart = (startIdx / dashboardData.monthly.length) * 100;
+  const fillEnd = ((endIdx + 1) / dashboardData.monthly.length) * 100;
+  fill.style.left = fillStart + "%";
+  fill.style.right = (100 - fillEnd) + "%";
+}
+
+async function updateDateRangeFilter() {
+  if (!dashboardData || !dashboardData.monthly) {
+    return;
+  }
+
+  const sliderStart = document.getElementById("date-range-slider-start");
+  const sliderEnd = document.getElementById("date-range-slider-end");
+  const updateBtn = document.getElementById("update-date-filter");
+  const resetBtn = document.getElementById("reset-date-filter");
+
+  if (!sliderStart || !sliderEnd) {
+    return;
+  }
+
+  const startIdx = Number(sliderStart.value);
+  const endIdx = Number(sliderEnd.value);
+
+  // Get month values
+  const startMonth = dashboardData.monthly[startIdx]?.month;
+  const endMonth = dashboardData.monthly[endIdx]?.month;
+
+  // Disable controls while loading
+  sliderStart.disabled = true;
+  sliderEnd.disabled = true;
+  if (updateBtn) updateBtn.disabled = true;
+  if (resetBtn) resetBtn.disabled = true;
+
+  // Fetch filtered data from API
+  try {
+    filteredData = await fetchFilteredDashboardData(startMonth, endMonth);
+    updateOverviewContent();
+  } catch (error) {
+    console.error("Failed to fetch filtered data:", error);
+    showError("Failed to load filtered data");
+  } finally {
+    // Re-enable slider and button
+    sliderStart.disabled = false;
+    sliderEnd.disabled = false;
+    if (updateBtn) updateBtn.disabled = false;
+    if (resetBtn) resetBtn.disabled = false;
+  }
+}
+
+async function fetchFilteredDashboardData(startMonth, endMonth) {
+  const params = new URLSearchParams();
+  if (startMonth) params.append("start", startMonth);
+  if (endMonth) params.append("end", endMonth);
+
+  const response = await fetch(`/dashboard-summary-filtered?${params.toString()}`);
+  if (!response.ok) {
+    throw new Error(`API error: ${response.status}`);
+  }
+
+  const payload = (await response.json()).data || {};
+
+  // Backward-compatibility for a still-running older API process that only
+  // returns the filtered summary shape without filtered chart/table payloads.
+  if (payload.totals || payload.profile) {
+    const startIdx = dashboardData?.monthly?.findIndex((entry) => entry.month === startMonth) ?? -1;
+    const endIdx = dashboardData?.monthly?.findIndex((entry) => entry.month === endMonth) ?? -1;
+    const hasValidSlice = startIdx >= 0 && endIdx >= startIdx;
+
+    return {
+      summary: payload,
+      monthly: hasValidSlice ? dashboardData.monthly.slice(startIdx, endIdx + 1) : (dashboardData?.monthly || []),
+      hourly: dashboardData?.hourly || [],
+      yearly: dashboardData?.yearly || [],
+      topArtists: dashboardData?.topArtists || [],
+      topTracks: dashboardData?.topTracks || [],
+    };
+  }
+
+  return {
+    summary: payload.summary || {},
+    monthly: payload.monthly || [],
+    hourly: payload.hourly || [],
+    yearly: payload.yearly || [],
+    topArtists: payload.top_artists || [],
+    topTracks: payload.top_tracks || [],
+  };
+}
+
+function updateDateRangeLabels() {
+  const startLabel = document.getElementById("date-range-start-label");
+  const endLabel = document.getElementById("date-range-end-label");
+
+  if (!dashboardData || !dashboardData.monthly || !startLabel || !endLabel) {
+    return;
+  }
+
+  const sliderStart = document.getElementById("date-range-slider-start");
+  const sliderEnd = document.getElementById("date-range-slider-end");
+
+  if (!sliderStart || !sliderEnd) {
+    return;
+  }
+
+  const startIdx = Number(sliderStart.value);
+  const endIdx = Number(sliderEnd.value);
+
+  const startMonth = dashboardData.monthly[startIdx]?.month;
+  const endMonth = dashboardData.monthly[endIdx]?.month;
+
+  if (startMonth) {
+    const startDate = new Date(startMonth + "-01");
+    startLabel.textContent = new Intl.DateTimeFormat("en-US", { month: "short", year: "numeric" }).format(startDate);
+  }
+
+  if (endMonth) {
+    const endDate = new Date(endMonth + "-01");
+    endLabel.textContent = new Intl.DateTimeFormat("en-US", { month: "short", year: "numeric" }).format(endDate);
+  }
+}
+
+function updateOverviewCharts(overview) {
+  const data = overview || getActiveOverviewData();
+  createMonthlyChart(data.monthly || []);
+  createHourlyChart(data.hourly || []);
+  createYearlyChart(data.yearly || []);
+  createProfileChart(data.summary?.profile || {});
+  createTopArtistsChart((data.topArtists || []).slice(0, 10));
+  createTopTracksChart((data.topTracks || []).slice(0, 10));
+}
+
+function refreshOverviewCharts() {
+  Object.values(charts).forEach((chart) => {
+    if (chart && chart.resize) {
+      chart.resize();
+    }
+  });
 }
 
 function escapeHtml(text) {
