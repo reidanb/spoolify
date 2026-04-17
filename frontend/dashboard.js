@@ -307,10 +307,29 @@ function createMonthlyChart(data) {
     charts.monthly.destroy();
   }
 
+  // Format month labels as "Mon YY" (e.g., "Jan '20", "Feb '20")
+  const formattedLabels = data.map((entry) => {
+    try {
+      const date = new Date(entry.month + "-01");
+      return new Intl.DateTimeFormat("en-US", { month: "short", year: "2-digit" }).format(date);
+    } catch {
+      return entry.month;
+    }
+  });
+
+  // Custom x-axis callback to show month labels at regular intervals
+  const xTickCallback = (value) => {
+    const idx = Number(value);
+    if (idx >= 0 && idx < formattedLabels.length) {
+      return formattedLabels[idx];
+    }
+    return "";
+  };
+
   charts.monthly = new Chart(ctx, {
     type: "line",
     data: {
-      labels: data.map((entry) => entry.month),
+      labels: formattedLabels,
       datasets: [{
         label: "Listening time",
         data: data.map((entry) => entry.minutes),
@@ -323,7 +342,7 @@ function createMonthlyChart(data) {
         pointHoverRadius: 4,
       }],
     },
-    options: baseChartOptions({ xTickLimit: 8, yTitle: "Minutes" }),
+    options: baseChartOptions({ xTickLimit: 12, xTickCallback, yTitle: "Minutes" }),
   });
 }
 
