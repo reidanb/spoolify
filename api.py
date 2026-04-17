@@ -20,7 +20,8 @@ from importer import import_file_stats
 from query_data import (
     get_top_artists, get_top_tracks, get_monthly_stats, 
     get_yearly_stats, get_hourly_stats, get_overall_stats,
-    get_listening_profile_data
+    get_listening_profile_data, get_unique_artist_count,
+    get_unique_track_count, get_date_range, get_peak_month
 )
 from queries import get_yearly_trend, get_wrapped
 
@@ -780,6 +781,80 @@ async def onboarding_import_archive_zip(
         return _import_archive_files(staged_files, mode=mode)
     finally:
         _cleanup_staged_files(staged_files)
+
+
+@app.get("/dashboard-summary")
+def dashboard_summary() -> Dict[str, Any]:
+    """Get comprehensive dashboard summary with aggregated stats."""
+    try:
+        conn = get_connection()
+        init_db(conn)
+        
+        # Get all the data needed for the dashboard
+        overall = get_overall_stats(conn)
+        profile = get_listening_profile_data(conn)
+        date_range = get_date_range(conn)
+        peak_month = get_peak_month(conn)
+        unique_artists = get_unique_artist_count(conn)
+        unique_tracks = get_unique_track_count(conn)
+        
+        # Get trends for insights
+        trends_data = get_yearly_trend(conn)
+        
+        # Generate insights
+        insights = []
+        if trends_data and "insights" in trends_data:
+            insights = trends_data.get("insights", [])[:3]
+        
+        # Add profile insight if available
+        if profile:
+            primary = profile.get("primary_profile", "").replace("_", " ").title()
+            if primary:
+                insights.insert(0, f"{primary} is your dominant listening period")
+        
+        # Build response
+        payload = {
+            "totals": {
+                "total_plays": overall.get("total_plays", 0),
+                "total_minutes_exact": round(overall.get("total_minutes_exact", 0), 2),
+                "total_hours": overall.get("total_hours", 0),
+                "unique_artists": unique_artists,
+                "unique_tracks": unique_tracks,
+                "date_range": {
+                    "start": date_range.get("start"),
+                    "end": date_range.get("end")
+                }
+            },
+            "profile": {
+                "primary": profile.get("primary_profile", "unknown"),
+                "primary_pct": round(profile.get("primary_pct", 0), 1),
+                "bucket_pct": profile.get("bucket_pct", {}),
+                "peak_hour": profile.get("peak_hour")
+            },
+            "peaks": {
+                "peak_month": peak_month,
+                "peak_year": trends_data.get("peak_year") if trends_data else None
+            },
+            "trends": {
+                "trend": trends_data.get("trend") if trends_data else "unknown",
+                "segments": trends_data.get("trend_segments", {}) if trends_data else {}
+            },
+            "insights": insights[:5]  # Return up to 5 insights
+        }
+        
+        conn.close()
+        return _with_meta(payload)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
+
+
+@app.get("/dashboard", include_in_schema=False)
+def dashboard_page():
+    """Serve the dashboard frontend."""
+    dashboard_file = FRONTEND_DIR / "dashboard.html"
+    if not dashboard_file.exists():
+        raise HTTPException(status_code=500, detail="Dashboard assets are missing")
+    return FileResponse(dashboard_file)
 
 
 if __name__ == "__main__":

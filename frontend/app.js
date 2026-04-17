@@ -11,7 +11,6 @@ const importZipBtn = document.getElementById("import-zip-btn");
 const steps = Array.from(document.querySelectorAll("[data-step]"));
 const indicators = Array.from(document.querySelectorAll("[data-step-indicator]"));
 
-const modeInput = document.getElementById("import-mode");
 const zipInput = document.getElementById("archive-zip");
 const zipSelected = document.getElementById("zip-selected");
 const validationStatus = document.getElementById("validation-status");
@@ -34,11 +33,13 @@ const donePill = document.getElementById("done-pill");
 const doneTitle = document.getElementById("done-title");
 const doneStatusMessage = document.getElementById("done-status-message");
 const doneResults = document.getElementById("done-results");
+const donePanel = document.getElementById("done-panel");
 const continueHint = document.getElementById("continue-hint");
 
 let currentStep = 1;
 let validationPassed = false;
 let validationRequestId = 0;
+let selectedImportMode = "historical_backfill";
 
 const VALIDATION_FAILURES = [
   {
@@ -113,7 +114,7 @@ function setContinueHint(text) {
 function formatMode(mode) {
   const labels = {
     historical_backfill: "Historical backfill",
-    ongoing_sync_prep: "Ongoing sync prep",
+    ongoing_sync_prep: "Recent ZIP top-up",
   };
   return labels[mode] || mode || "Unknown";
 }
@@ -183,9 +184,12 @@ function createResultSection(title, items) {
   return section;
 }
 
-function createIssueSection(title, values) {
+function createIssueSection(title, values, fullWidth = false) {
   const section = document.createElement("section");
   section.className = "result-section";
+  if (fullWidth) {
+    section.classList.add("result-section-full-width");
+  }
 
   const heading = document.createElement("h3");
   heading.textContent = title;
@@ -261,7 +265,7 @@ function renderValidationResults(payload) {
 
   validationResults.appendChild(
     createResultSection("Import Recommendation", [
-      { label: "Recommended mode", value: formatMode(payload.recommended_mode) },
+      { label: "Recommended approach", value: formatMode(payload.recommended_mode) },
       { label: "Why", value: payload.reason || "No recommendation available." },
       { label: "Current DB rows", value: String(dbState.total_rows ?? "n/a") },
       { label: "Latest DB play", value: formatDateTime(dbState.latest_ts) },
@@ -280,7 +284,7 @@ function renderValidationResults(payload) {
   };
   const modeConsequences = MODE_CONSEQUENCES[payload.recommended_mode] || [];
   if (modeConsequences.length > 0) {
-    validationResults.appendChild(createIssueSection("What this means", modeConsequences));
+    validationResults.appendChild(createIssueSection("What this means", modeConsequences, true));
   }
 
   if (Array.isArray(payload.account_export_markers_found) && payload.account_export_markers_found.length > 0) {
@@ -383,6 +387,9 @@ function resetImportPresentation() {
 
 function updateDoneState(payload) {
   const outcome = classifyImport(payload);
+  if (donePanel) {
+    donePanel.classList.remove("hidden");
+  }
   doneMessage.textContent = outcome.doneMessage;
   setStatusBanner(doneStatus, donePill, doneTitle, doneStatusMessage, outcome);
   renderImportResults(payload, doneResults);
@@ -448,9 +455,7 @@ async function validateSelectedZip({ moveToValidation = false } = {}) {
       return;
     }
 
-    if (data.recommended_mode) {
-      modeInput.value = data.recommended_mode;
-    }
+    selectedImportMode = data.recommended_mode || "historical_backfill";
 
     renderValidationResults(data);
 
@@ -498,7 +503,7 @@ async function validateSelectedZip({ moveToValidation = false } = {}) {
       tone: "neutral",
       label: "Ready",
       title: "Validation complete",
-      message: "The recommended import mode has been preselected. Adjust it only if you know this archive should be treated differently.",
+      message: "The recommended import approach was selected automatically. Start import when ready.",
     });
   } catch (error) {
     if (requestId !== validationRequestId) {
@@ -559,7 +564,10 @@ function resetFlow() {
   stepTwoContinueBtn.disabled = true;
   zipInput.value = "";
   zipSelected.textContent = "No ZIP selected.";
-  modeInput.value = "historical_backfill";
+  selectedImportMode = "historical_backfill";
+  if (donePanel) {
+    donePanel.classList.add("hidden");
+  }
   setStatusBanner(validationStatus, validationPill, validationTitle, validationMessage, {
     tone: "neutral",
     label: "Idle",
@@ -571,7 +579,7 @@ function resetFlow() {
     tone: "neutral",
     label: "Ready",
     title: "Validation complete",
-    message: "Choose the recommended mode or adjust it if you know this archive should be imported differently.",
+    message: "Start import after validation. Spoolify applies the recommended approach automatically.",
   });
   resetImportPresentation();
   doneMessage.textContent = "Your listening history is ready to explore locally.";
@@ -646,7 +654,7 @@ importZipBtn.addEventListener("click", async () => {
   importResults.appendChild(createEmptyState("Import is running. Results will appear here when processing finishes."));
   const formData = new FormData();
   formData.append("file", file);
-  formData.append("mode", modeInput.value);
+  formData.append("mode", selectedImportMode);
 
   try {
     const response = await fetch("/onboarding/import-zip", {
@@ -678,7 +686,14 @@ importZipBtn.addEventListener("click", async () => {
     importTechnical.textContent = JSON.stringify(data, null, 2);
     importDetails.classList.remove("hidden");
     updateDoneState(data);
-    setStep(5);
+    setStep(4);
+    
+    // Redirect to dashboard after 3 seconds for successful imports only
+    if (outcome.tone === "success") {
+      setTimeout(() => {
+        window.location.href = "/dashboard";
+      }, 3000);
+    }
   } catch (error) {
     setStatusBanner(importStatus, importPill, importTitle, importMessage, {
       tone: "error",
@@ -695,4 +710,28 @@ importZipBtn.addEventListener("click", async () => {
   }
 });
 
-resetFlow();
+// Check if database has data on page load; redirect to dashboard if it does
+async function checkAndRedirectIfDataExists() {
+  try {
+    const response = await fetch("/stats");
+    if (response.ok) {
+      const data = await response.json();
+      const stats = data.data || data;
+      
+      // If there's data in the database (overall stats with plays > 0), redirect to dashboard
+      if (stats.overall && stats.overall.total_plays > 0) {
+        window.location.href = "/dashboard";
+        return;
+      }
+    }
+  } catch (error) {
+    // If stats endpoint fails or database is empty, stay on onboarding
+    console.log("No existing data or error checking stats, showing onboarding");
+  }
+  
+  // Show onboarding if no data exists
+  resetFlow();
+}
+
+// Run on page load
+checkAndRedirectIfDataExists();

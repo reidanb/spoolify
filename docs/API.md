@@ -402,7 +402,7 @@ Validates a Spotify ZIP archive upload (multipart form-data).
   },
   "issues": [],
   "recommended_mode": "ongoing_sync_prep",
-  "reason": "Archive includes recent playback and database already has data; use this to top up before sync."
+  "reason": "Archive includes recent playback and database already has data; use this ZIP to top up newer plays."
 }
 ```
 
@@ -433,12 +433,17 @@ Imports Spotify history from a ZIP upload (multipart form-data).
 **Form fields:**
 
 - `file`: ZIP file containing streaming history JSON files
-- `mode`: `historical_backfill` or `ongoing_sync_prep`
+- `mode`: `historical_backfill` or `ongoing_sync_prep` (both ZIP-only modes)
 
 Allowed `mode` values:
 
 - `historical_backfill`
 - `ongoing_sync_prep`
+
+Mode intent in ZIP-only operation:
+
+- `historical_backfill`: first-time or full re-import behavior
+- `ongoing_sync_prep`: recent ZIP top-up behavior (no live API sync required)
 
 **Response (example):**
 ```json
