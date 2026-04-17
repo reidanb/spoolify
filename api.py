@@ -21,7 +21,12 @@ from query_data import (
     get_top_artists, get_top_tracks, get_monthly_stats, 
     get_yearly_stats, get_hourly_stats, get_overall_stats,
     get_listening_profile_data, get_unique_artist_count,
-    get_unique_track_count, get_date_range, get_peak_month
+    get_unique_track_count, get_date_range, get_peak_month,
+    get_overall_stats_filtered, get_unique_artist_count_filtered,
+    get_unique_track_count_filtered, get_monthly_stats_filtered,
+    get_hourly_stats_filtered, get_yearly_stats_filtered,
+    get_top_artists_filtered, get_top_tracks_filtered,
+    get_date_range_filtered, get_peak_month_filtered
 )
 from queries import get_yearly_trend, get_wrapped
 
@@ -560,6 +565,57 @@ def _recommend_mode(total_rows: int, archive_latest: Optional[datetime], db_late
     }
 
 
+def _build_profile_from_hourly_rows(hourly_rows: List[Any]) -> Dict[str, Any]:
+    bucket_minutes = {
+        "night": 0.0,
+        "morning": 0.0,
+        "afternoon": 0.0,
+        "evening": 0.0,
+    }
+    total_minutes = 0.0
+    peak_hour = None
+    peak_hour_minutes = -1.0
+
+    for hour, _plays, minutes in hourly_rows:
+        minute_value = float(minutes or 0)
+        total_minutes += minute_value
+        numeric_hour = int(hour)
+
+        if numeric_hour < 6:
+            bucket_minutes["night"] += minute_value
+        elif numeric_hour < 12:
+            bucket_minutes["morning"] += minute_value
+        elif numeric_hour < 18:
+            bucket_minutes["afternoon"] += minute_value
+        else:
+            bucket_minutes["evening"] += minute_value
+
+        if minute_value > peak_hour_minutes:
+            peak_hour_minutes = minute_value
+            peak_hour = numeric_hour
+
+    if total_minutes <= 0:
+        return {
+            "primary_profile": "unknown",
+            "primary_pct": 0,
+            "bucket_pct": {key: 0 for key in bucket_minutes},
+            "peak_hour": None,
+        }
+
+    bucket_pct = {
+        key: round((value / total_minutes) * 100, 1)
+        for key, value in bucket_minutes.items()
+    }
+    primary_profile = max(bucket_pct, key=bucket_pct.get)
+
+    return {
+        "primary_profile": primary_profile,
+        "primary_pct": bucket_pct[primary_profile],
+        "bucket_pct": bucket_pct,
+        "peak_hour": peak_hour,
+    }
+
+
 # ==============================================================================
 # ENDPOINTS
 # ==============================================================================
@@ -844,6 +900,102 @@ def dashboard_summary() -> Dict[str, Any]:
         
         conn.close()
         return _with_meta(payload)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
+
+
+@app.get("/dashboard-summary-filtered")
+def dashboard_summary_filtered(start: Optional[str] = None, end: Optional[str] = None) -> Dict[str, Any]:
+    """Get dashboard summary filtered by date range (YYYY-MM format)."""
+    try:
+        # Validate date format
+        if start:
+            if len(start) != 7 or start[4] != "-":
+                raise HTTPException(status_code=400, detail="start must be in YYYY-MM format")
+        if end:
+            if len(end) != 7 or end[4] != "-":
+                raise HTTPException(status_code=400, detail="end must be in YYYY-MM format")
+        
+        conn = get_connection()
+        init_db(conn)
+
+        overall = get_overall_stats_filtered(conn, start, end)
+        monthly_data = get_monthly_stats_filtered(conn, start, end)
+        hourly_data = get_hourly_stats_filtered(conn, start, end)
+        yearly_data = get_yearly_stats_filtered(conn, start, end)
+        top_artists_data = get_top_artists_filtered(conn, limit=25, start_month=start, end_month=end)
+        top_tracks_data = get_top_tracks_filtered(conn, limit=25, start_month=start, end_month=end)
+        profile = _build_profile_from_hourly_rows(hourly_data)
+        unique_artists = get_unique_artist_count_filtered(conn, start, end)
+        unique_tracks = get_unique_track_count_filtered(conn, start, end)
+        date_range = get_date_range_filtered(conn, start, end)
+        peak_month = get_peak_month_filtered(conn, start, end)
+
+        peak_year = None
+        if yearly_data:
+            peak_year = max(yearly_data, key=lambda row: row[2] or 0)[0]
+
+        insights = []
+        primary = profile.get("primary_profile", "unknown")
+        if primary and primary != "unknown":
+            insights.append(f"{primary.replace('_', ' ').title()} is your dominant listening period in this range")
+        if peak_month:
+            insights.append(f"{peak_month} is the strongest month in the selected range")
+
+        summary_payload = {
+            "totals": {
+                "total_plays": overall.get("total_plays", 0),
+                "total_minutes_exact": round(overall.get("total_minutes_exact", 0), 2),
+                "total_hours": overall.get("total_hours", 0),
+                "unique_artists": unique_artists,
+                "unique_tracks": unique_tracks,
+                "date_range": date_range
+            },
+            "profile": {
+                "primary": profile.get("primary_profile", "unknown"),
+                "primary_pct": round(profile.get("primary_pct", 0), 1),
+                "bucket_pct": profile.get("bucket_pct", {}),
+                "peak_hour": profile.get("peak_hour")
+            },
+            "peaks": {
+                "peak_month": peak_month,
+                "peak_year": peak_year
+            },
+            "trends": {
+                "trend": "filtered_range",
+                "segments": {}
+            },
+            "insights": insights[:5]
+        }
+
+        payload = {
+            "summary": summary_payload,
+            "monthly": [
+                {"month": month, "plays": plays, "minutes": int(minutes)}
+                for month, plays, minutes in monthly_data
+            ],
+            "hourly": [
+                {"hour": hour, "plays": plays, "minutes": int(minutes)}
+                for hour, plays, minutes in hourly_data
+            ],
+            "yearly": [
+                {"year": year, "plays": plays, "minutes": int(minutes)}
+                for year, plays, minutes in yearly_data
+            ],
+            "top_artists": [
+                {"name": artist, "minutes": int(minutes)}
+                for artist, minutes in top_artists_data
+            ],
+            "top_tracks": [
+                {"name": track, "artist": artist, "minutes": int(minutes)}
+                for track, artist, minutes in top_tracks_data
+            ],
+        }
+
+        conn.close()
+        return _with_meta(payload)
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
 
