@@ -95,12 +95,15 @@ Useful URLs after startup:
 
 - API base: `http://localhost:8000`
 - Onboarding UI: `http://localhost:8000/`
+- Dashboard UI (main post-import hub): `http://localhost:8000/dashboard`
+- Raw stats JSON endpoint: `http://localhost:8000/stats`
 - Swagger docs: `http://localhost:8000/docs`
 - ReDoc: `http://localhost:8000/redoc`
 
 Main endpoints:
 
 - `GET /health`
+- `GET /dashboard-summary`
 - `GET /stats`
 - `GET /top-artists?limit=10`
 - `GET /top-tracks?limit=10`
@@ -116,15 +119,14 @@ Main endpoints:
 
 See full API details in `docs/API.md`.
 
-### Frontend Onboarding (Phase 7 Start)
+### Frontend Routes
 
-When API mode is running, open the onboarding page in your browser:
+When API mode is running:
 
-```sh
-http://localhost:8000/
-```
+- `http://localhost:8000/` serves onboarding/import flow
+- `http://localhost:8000/dashboard` serves the main listening hub after import
 
-The page helps you:
+The onboarding flow helps you:
 
 - request and prepare Spotify Extended Streaming History
 - validate archive file/folder structure before import

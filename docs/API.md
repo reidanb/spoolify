@@ -61,13 +61,19 @@ export SPOOLIFY_API_PORT=8000
 
 ## API Endpoints
 
-### Onboarding Frontend
+### Frontend Routes
 
 ```
 GET /
 ```
 
 Serves the Phase 7 onboarding web UI for archive preparation and guided import.
+
+```
+GET /dashboard
+```
+
+Serves the user-facing listening dashboard hub after onboarding/import.
 
 ### Health Check
 
@@ -85,6 +91,26 @@ Returns server status and database connectivity.
 }
 ```
 
+### Dashboard Summary
+
+```
+GET /dashboard-summary
+```
+
+Returns aggregated dashboard payload for the user-facing `/dashboard` route.
+
+Current payload includes:
+- `data.totals` (plays, hours, unique artists, unique tracks, date range)
+- `data.profile` (primary period, bucket percentages, peak hour)
+- `data.peaks` (peak month and year)
+- `data.trends` (trend label and segments)
+- `data.insights` (ordered narrative insights)
+
+All analytics endpoints now return a stable envelope:
+- `meta.generated_at` (UTC ISO timestamp)
+- `meta.schema_version` (compatibility-sensitive response schema version; `2.x` uses the `meta` + `data` envelope)
+- `data` (endpoint payload)
+
 ### Overall Statistics
 
 ```
@@ -92,6 +118,8 @@ GET /stats
 ```
 
 Returns comprehensive statistics including overall listening time, listening profile, and top artists/tracks.
+
+`/stats` remains a raw analytics endpoint and source of truth for programmatic consumers.
 
 All analytics endpoints now return a stable envelope:
 - `meta.generated_at` (UTC ISO timestamp)
@@ -536,7 +564,10 @@ importer.py        # Import logic (unchanged)
 # Health check
 curl http://localhost:8000/health
 
-# Get stats
+# Dashboard summary payload (used by /dashboard)
+curl http://localhost:8000/dashboard-summary
+
+# Get stats (raw JSON analytics)
 curl http://localhost:8000/stats
 
 # Get top artists (limit to 5)
@@ -551,10 +582,11 @@ curl "http://localhost:8000/wrapped?year=2019"
 ```python
 import requests
 
-response = requests.get("http://localhost:8000/stats")
-print(response.json())
-```
+dashboard = requests.get("http://localhost:8000/dashboard-summary").json()
+stats = requests.get("http://localhost:8000/stats").json()
 
+print(dashboard["meta"], stats["meta"])
+```
 ## Performance Notes
 
 - All endpoints query the SQLite database directly
