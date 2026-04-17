@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Your Listening Hub — Spoolify</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/frontend/dashboard.css" />
+</head>
+<body>
+  <div class="bg-shape bg-shape-a" aria-hidden="true"></div>
+  <div class="bg-shape bg-shape-b" aria-hidden="true"></div>
+
+  <div class="dashboard-wrapper">
+    <!-- Header -->
+    <header class="dashboard-header reveal">
+      <div class="header-content">
+        <div class="header-main">
+          <h1>Your Listening Hub</h1>
+          <p class="subtitle">A personal archive of your Spotify history, analyzed locally</p>
+          <p id="header-narrative" class="header-narrative">Loading your archive story...</p>
+        </div>
+        <div class="header-actions">
+          <button id="btn-wrapped" class="btn btn-primary" title="View Wrapped">View Wrapped</button>
+          <button id="btn-import" class="btn btn-secondary" title="Import More Data">Import More Data</button>
+          <a href="/docs" class="btn btn-ghost" title="View API Docs" target="_blank">API Docs</a>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="dashboard-main reveal">
+      <!-- Tab Navigation -->
+      <nav class="dashboard-tabs">
+        <button class="tab-btn active" data-tab="overview">Overview</button>
+        <button class="tab-btn" data-tab="trends">Trends</button>
+        <button class="tab-btn" data-tab="artists">Artists</button>
+        <button class="tab-btn" data-tab="tracks">Tracks</button>
+        <button class="tab-btn" data-tab="time">Time</button>
+        <button class="tab-btn" data-tab="wrapped">Wrapped</button>
+      </nav>
+
+      <!-- Loading State -->
+      <div id="loading-state" class="loading-overlay">
+        <div class="spinner"></div>
+        <p>Loading your listening hub...</p>
+      </div>
+
+      <!-- Tab: Overview -->
+      <section id="overview-tab" class="dashboard-tab active">
+        <section class="section-group">
+          <div class="section-heading">
+            <h2>Archive Snapshot</h2>
+            <p>The quickest read on the shape, scale, and rhythm of your listening history.</p>
+          </div>
+
+        <div class="hero-metrics">
+          <div class="metric-card">
+            <div class="metric-label">Total Plays</div>
+            <div class="metric-value" id="metric-plays">—</div>
+            <div class="metric-sub">plays recorded locally</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Total Listening Time</div>
+            <div class="metric-value" id="metric-hours">—</div>
+            <div class="metric-sub" id="metric-hours-detail">hours listened</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Artists</div>
+            <div class="metric-value" id="metric-artists">—</div>
+            <div class="metric-sub">distinct artist names</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Tracks</div>
+            <div class="metric-value" id="metric-tracks">—</div>
+            <div class="metric-sub">deduped by URI when available</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Date Range</div>
+            <div class="metric-value metric-value-compact" id="metric-date-range">—</div>
+            <div class="metric-sub" id="metric-date-range-detail">—</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Peak Hour</div>
+            <div class="metric-value" id="metric-peak-hour">—</div>
+            <div class="metric-sub">hour of day</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Primary Period</div>
+            <div class="metric-value" id="metric-primary-period">—</div>
+            <div class="metric-sub" id="metric-primary-pct">—</div>
+          </div>
+        </div>
+        </section>
+
+        <section class="section-group">
+          <div class="section-heading">
+            <h2>Charts</h2>
+            <p>The long view first, then the supporting patterns around time, artists, and tracks.</p>
+          </div>
+
+        <div class="featured-chart-grid">
+          <div class="chart-container chart-container-featured">
+            <div class="chart-header">
+              <h3>Monthly Listening Trend</h3>
+              <p>Your strongest story chart across the full archive.</p>
+            </div>
+            <canvas id="chart-monthly"></canvas>
+          </div>
+        </div>
+
+        <div class="charts-grid charts-grid-secondary">
+          <div class="chart-container">
+            <div class="chart-header">
+              <h3>Hour of Day</h3>
+              <p>When listening tends to cluster across a typical day.</p>
+            </div>
+            <canvas id="chart-hourly"></canvas>
+          </div>
+          <div class="chart-container">
+            <div class="chart-header">
+              <h3>Listening Profile</h3>
+              <p>Morning, afternoon, evening, and night as a single glance.</p>
+            </div>
+            <canvas id="chart-profile"></canvas>
+            <div id="profile-breakdown" class="profile-breakdown"></div>
+          </div>
+          <div class="chart-container">
+            <div class="chart-header">
+              <h3>Yearly Trend</h3>
+              <p>The higher-level arc behind growth, dips, and recovery.</p>
+            </div>
+            <canvas id="chart-yearly"></canvas>
+          </div>
+          <div class="chart-container wide">
+            <div class="chart-header">
+              <h3>Top Artists (Overview)</h3>
+              <p>Top 10 by listening minutes.</p>
+            </div>
+            <canvas id="chart-top-artists"></canvas>
+          </div>
+          <div class="chart-container wide">
+            <div class="chart-header">
+              <h3>Top Tracks (Overview)</h3>
+              <p>Top 10 by listening minutes.</p>
+            </div>
+            <canvas id="chart-top-tracks"></canvas>
+          </div>
+        </div>
+        </section>
+
+        <section class="section-group insights-section">
+          <div class="section-heading">
+            <h2>Insights</h2>
+            <p>A narrative view of the behavior, peaks, dips, and recoveries in your archive.</p>
+          </div>
+          <div class="insights-grid" id="insights-container">
+            <!-- Populated by JS -->
+          </div>
+        </section>
+
+        <section class="section-group">
+          <div class="section-heading">
+            <h2>Detailed Rankings</h2>
+            <p>The fuller cut of your top artists and tracks beyond the overview charts.</p>
+          </div>
+
+        <div class="tables-grid">
+          <div class="table-container">
+            <h3>Top Artists (Detailed)</h3>
+            <table class="data-table" id="table-top-artists">
+              <thead>
+                <tr>
+                  <th>Rank</th>
+                  <th>Artist</th>
+                  <th>Minutes</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-artists">
+                <!-- Populated by JS -->
+              </tbody>
+            </table>
+          </div>
+          <div class="table-container">
+            <h3>Top Tracks (Detailed)</h3>
+            <table class="data-table" id="table-top-tracks">
+              <thead>
+                <tr>
+                  <th>Rank</th>
+                  <th>Track</th>
+                  <th>Artist</th>
+                  <th>Minutes</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-tracks">
+                <!-- Populated by JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+        </section>
+      </section>
+
+      <!-- Tab: Trends -->
+      <section id="trends-tab" class="dashboard-tab">
+        <div class="section-content">
+          <p class="section-placeholder">Trends analysis coming soon</p>
+        </div>
+      </section>
+
+      <!-- Tab: Artists -->
+      <section id="artists-tab" class="dashboard-tab">
+        <div class="section-content">
+          <canvas id="chart-artists-detail" style="max-height: 400px;"></canvas>
+          <div id="artists-list"></div>
+        </div>
+      </section>
+
+      <!-- Tab: Tracks -->
+      <section id="tracks-tab" class="dashboard-tab">
+        <div class="section-content">
+          <canvas id="chart-tracks-detail" style="max-height: 400px;"></canvas>
+          <div id="tracks-list"></div>
+        </div>
+      </section>
+
+      <!-- Tab: Time -->
+      <section id="time-tab" class="dashboard-tab">
+        <div class="section-content">
+          <p class="section-placeholder">Time analysis coming soon</p>
+        </div>
+      </section>
+
+      <!-- Tab: Wrapped -->
+      <section id="wrapped-tab" class="dashboard-tab">
+        <div class="section-content">
+          <p class="section-placeholder">Wrapped summary coming soon</p>
+        </div>
+      </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="dashboard-footer">
+      <p>Spoolify keeps your history local and queryable.</p>
+      <div class="footer-actions">
+        <a href="/" class="btn btn-secondary footer-btn">Go to Import Flow</a>
+      </div>
+    </footer>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="/frontend/dashboard.js"></script>
+</body>
+</html>

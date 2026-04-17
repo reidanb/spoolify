@@ -129,8 +129,8 @@ The page helps you:
 - request and prepare Spotify Extended Streaming History
 - validate archive file/folder structure before import
 - validate and import the delivered ZIP archive directly
-- import in either `historical_backfill` or `ongoing_sync_prep` mode
-- review Spotify Developer app prerequisites for future sync phases
+- import in either `historical_backfill` or `ongoing_sync_prep` mode (both ZIP-only)
+- choose between first-time full import and recent ZIP top-up behavior
 - keep a privacy-first, local-first setup
 
 ---

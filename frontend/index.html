@@ -15,7 +15,6 @@
 
   <main class="page">
     <header class="hero reveal">
-      <img class="brand-logo" src="/frontend/logo.png" alt="Spoolify logo" />
       <p class="eyebrow">Onboarding</p>
       <h1>Bring your Spotify history into Spoolify</h1>
       <p class="subtitle">Import your full listening history once, then explore local stats, trends, and wrapped-style summaries without sending your data anywhere else.</p>
@@ -27,7 +26,6 @@
         <div class="step-indicator upcoming" data-step-indicator="2">2 Choose ZIP</div>
         <div class="step-indicator upcoming" data-step-indicator="3">3 Validate</div>
         <div class="step-indicator upcoming" data-step-indicator="4">4 Import</div>
-        <div class="step-indicator upcoming" data-step-indicator="5">5 Done</div>
       </div>
 
       <section class="step" data-step="1">
@@ -92,12 +90,7 @@
 
       <section class="step hidden" data-step="4">
         <h2 tabindex="-1">Import</h2>
-        <p>Confirm the suggested mode, then start the import. Spoolify will keep duplicates out of the database automatically.</p>
-        <label for="import-mode">Import mode</label>
-        <select id="import-mode" name="import-mode">
-          <option value="historical_backfill">Historical backfill (first-time full import)</option>
-          <option value="ongoing_sync_prep">Ongoing sync prep (recent top-up)</option>
-        </select>
+        <p>Start import to process this ZIP. Spoolify applies the recommended approach automatically and keeps duplicates out of the database.</p>
         <div id="import-status" class="status-banner neutral" aria-live="polite">
           <div id="import-pill" class="status-pill">Ready</div>
           <div class="status-copy">
@@ -114,25 +107,24 @@
           <button id="to-step-3b" type="button" class="ghost">Back</button>
           <button id="import-zip-btn" type="button">Start Import</button>
         </div>
-      </section>
-
-      <section class="step hidden" data-step="5">
-        <h2 tabindex="-1">Import Complete</h2>
-        <p id="done-message">Your listening history is ready to explore locally.</p>
-        <div id="done-status" class="status-banner success" aria-live="polite">
-          <div id="done-pill" class="status-pill">Done</div>
-          <div class="status-copy">
-            <strong id="done-title">Import finished</strong>
-            <div id="done-status-message" class="status-message"></div>
+        <div id="done-panel" class="done-panel hidden">
+          <h2 tabindex="-1">Import Complete</h2>
+          <p id="done-message">Your listening history is ready to explore locally.</p>
+          <div id="done-status" class="status-banner success" aria-live="polite">
+            <div id="done-pill" class="status-pill">Done</div>
+            <div class="status-copy">
+              <strong id="done-title">Import finished</strong>
+              <div id="done-status-message" class="status-message"></div>
+            </div>
           </div>
+          <div id="done-results" class="result-grid" aria-live="polite"></div>
+          <div class="action-row">
+            <a class="action-link" href="/stats">View Stats</a>
+            <a class="action-link" href="/wrapped" target="_blank" rel="noreferrer">View Wrapped</a>
+            <a class="action-link ghost-link" href="/docs" target="_blank" rel="noreferrer">Open API Docs</a>
+          </div>
+          <button id="restart-btn" type="button">Run Another Import</button>
         </div>
-        <div id="done-results" class="result-grid" aria-live="polite"></div>
-        <div class="action-row">
-          <a class="action-link" href="/stats" target="_blank" rel="noreferrer">View Stats</a>
-          <a class="action-link" href="/wrapped" target="_blank" rel="noreferrer">View Wrapped</a>
-          <a class="action-link ghost-link" href="/docs" target="_blank" rel="noreferrer">Open API Docs</a>
-        </div>
-        <button id="restart-btn" type="button">Run Another Import</button>
       </section>
     </section>
   </main>

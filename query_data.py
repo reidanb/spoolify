@@ -95,3 +95,44 @@ def get_listening_profile_data(conn):
     """Returns listening profile (time-of-day breakdown)."""
     from queries import get_listening_profile
     return get_listening_profile(conn)
+
+
+def get_unique_artist_count(conn):
+    """Returns count of unique artists."""
+    cur = conn.cursor()
+    cur.execute('SELECT COUNT(DISTINCT artist_name) FROM plays WHERE artist_name IS NOT NULL')
+    return cur.fetchone()[0] or 0
+
+
+def get_unique_track_count(conn):
+    """Returns count of unique tracks."""
+    cur = conn.cursor()
+    cur.execute('''
+        SELECT COUNT(DISTINCT COALESCE(NULLIF(track_uri, ''), track_name || '||' || COALESCE(artist_name, '')))
+        FROM plays
+        WHERE track_name IS NOT NULL
+    ''')
+    return cur.fetchone()[0] or 0
+
+
+def get_date_range(conn):
+    """Returns earliest and latest timestamps in database."""
+    cur = conn.cursor()
+    cur.execute('SELECT MIN(ts), MAX(ts) FROM plays WHERE ts IS NOT NULL')
+    min_ts, max_ts = cur.fetchone()
+    return {"start": min_ts, "end": max_ts}
+
+
+def get_peak_month(conn):
+    """Returns month with most listening minutes."""
+    cur = conn.cursor()
+    cur.execute('''
+        SELECT substr(ts, 1, 7) AS month, SUM(ms_played) / 60000 AS minutes
+        FROM plays
+        WHERE ts IS NOT NULL
+        GROUP BY month
+        ORDER BY minutes DESC
+        LIMIT 1
+    ''')
+    row = cur.fetchone()
+    return row[0] if row else None
