@@ -3,6 +3,19 @@ Data retrieval functions (return data, no printing).
 These are reused by both CLI and API layers.
 """
 
+import re
+
+_MONTH_RE = re.compile(r'^\d{4}-(?:0[1-9]|1[0-2])$')
+
+
+def _validate_month_param(value):
+    """Validates that value matches YYYY-MM format. Raises ValueError if not."""
+    if value is None:
+        return None
+    if not _MONTH_RE.match(value):
+        raise ValueError(f"Invalid month format: expected YYYY-MM")
+    return value
+
 
 def _next_month(month_value):
     year, month = month_value.split("-")
@@ -15,6 +28,9 @@ def _next_month(month_value):
 
 
 def _build_ts_filter(start_month=None, end_month=None, include_ts_not_null=True):
+    start_month = _validate_month_param(start_month)
+    end_month = _validate_month_param(end_month)
+
     clauses = []
     params = []
 
