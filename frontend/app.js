@@ -610,6 +610,16 @@ zipInput.addEventListener("change", async () => {
 
 startBtn.addEventListener("click", () => setStep(2));
 restartBtn.addEventListener("click", () => resetFlow());
+
+// Theme toggle listener
+const themeToggle = document.getElementById("theme-toggle");
+if (themeToggle) {
+  initializeTheme();
+  themeToggle.addEventListener("click", () => {
+    toggleTheme();
+  });
+}
+
 stepTwoBackBtn.addEventListener("click", () => setStep(1));
 stepThreeBackBtn.addEventListener("click", () => setStep(2));
 stepFourBackBtn.addEventListener("click", () => setStep(3));
@@ -735,3 +745,40 @@ async function checkAndRedirectIfDataExists() {
 
 // Run on page load
 checkAndRedirectIfDataExists();
+
+// Theme Toggle Functions
+function initializeTheme() {
+  const savedTheme = localStorage.getItem("theme");
+  const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+  const isDark = savedTheme ? savedTheme === "dark" : prefersDark;
+
+  if (isDark) {
+    document.body.classList.add("dark-mode");
+    updateThemeToggleButton(true);
+  } else {
+    document.body.classList.remove("dark-mode");
+    updateThemeToggleButton(false);
+  }
+}
+
+function toggleTheme() {
+  const isDark = document.body.classList.contains("dark-mode");
+  
+  if (isDark) {
+    document.body.classList.remove("dark-mode");
+    localStorage.setItem("theme", "light");
+    updateThemeToggleButton(false);
+  } else {
+    document.body.classList.add("dark-mode");
+    localStorage.setItem("theme", "dark");
+    updateThemeToggleButton(true);
+  }
+}
+
+function updateThemeToggleButton(isDark) {
+  const themeToggle = document.getElementById("theme-toggle");
+  if (themeToggle) {
+    themeToggle.textContent = isDark ? "☀️" : "🌙";
+    themeToggle.title = isDark ? "Switch to light mode" : "Switch to dark mode";
+  }
+}
