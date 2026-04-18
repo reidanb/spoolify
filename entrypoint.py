@@ -11,7 +11,32 @@ Usage:
 
 import sys
 import os
+import logging
+import logging.handlers
 
+
+LOG_LEVEL = os.environ.get("SPOOLIFY_LOG_LEVEL", "INFO").upper()
+LOG_FILE = os.environ.get("SPOOLIFY_LOG_FILE", "")
+
+
+def _configure_logging() -> None:
+    """Configure root logger: always log to stderr; optionally to a rotating file."""
+    fmt = "%(asctime)s %(levelname)s %(name)s: %(message)s"
+    datefmt = "%Y-%m-%dT%H:%M:%SZ"
+
+    handlers: list[logging.Handler] = [logging.StreamHandler(sys.stderr)]
+
+    if LOG_FILE:
+        file_handler = logging.handlers.RotatingFileHandler(
+            LOG_FILE,
+            maxBytes=10 * 1024 * 1024,  # 10 MB per file
+            backupCount=5,
+            encoding="utf-8",
+        )
+        file_handler.setFormatter(logging.Formatter(fmt, datefmt=datefmt))
+        handlers.append(file_handler)
+
+    logging.basicConfig(level=LOG_LEVEL, format=fmt, datefmt=datefmt, handlers=handlers)
 
 def run_cli():
     """Run CLI interface."""
@@ -21,6 +46,7 @@ def run_cli():
 
 def run_api():
     """Run API server."""
+    _configure_logging()
     try:
         import uvicorn
     except ImportError:
@@ -33,10 +59,12 @@ def run_api():
     # Parse optional host:port from remaining args
     host = os.environ.get("SPOOLIFY_API_HOST", "0.0.0.0")
     port = int(os.environ.get("SPOOLIFY_API_PORT", "8000"))
-    
+
     print(f"Starting Spoolify API on {host}:{port}")
     print(f"Documentation: http://localhost:{port}/docs")
-    uvicorn.run(app, host=host, port=port)
+    if LOG_FILE:
+        print(f"Logging to: {LOG_FILE}")
+    uvicorn.run(app, host=host, port=port, log_level=LOG_LEVEL.lower())
 
 
 def main():
