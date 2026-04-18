@@ -518,10 +518,11 @@ If you are deploying Spoolify in a production or shared environment:
 If you discover a security issue in Spoolify:
 
 1. **Do not** open a public GitHub issue.
-2. Contact the maintainer privately with details.
-3. Allow time for a fix before public disclosure.
+2. Use [GitHub private vulnerability reporting](https://github.com/reidanb/Spoolify/security/advisories/new) — this creates a private draft advisory visible only to you and the maintainer, with no public exposure.
+3. Alternatively, email `reidanb@users.noreply.github.com` (forwards privately to the maintainer).
+4. Allow reasonable time for a fix before public disclosure.
 
 ---
 
-**Document Version:** 1.0  
+**Document Version:** 1.1  
 **Last Updated:** April 2026
