@@ -391,6 +391,18 @@ function createMonthlyChart(data) {
     return "";
   };
 
+  const monthlyOptions = baseChartOptions({ xTickLimit: 12, xTickCallback, yTitle: "Minutes" });
+  monthlyOptions.interaction = { mode: "index", intersect: false };
+  monthlyOptions.plugins = monthlyOptions.plugins || {};
+  monthlyOptions.plugins.tooltip = {
+    ...(monthlyOptions.plugins.tooltip || {}),
+    intersect: false,
+    callbacks: {
+      title: (items) => items?.[0]?.label || "",
+      label: (context) => `${formatInteger(Math.round(context.parsed?.y || 0))} minutes`,
+    },
+  };
+
   charts.monthly = new Chart(ctx, {
     type: "line",
     data: {
@@ -407,7 +419,7 @@ function createMonthlyChart(data) {
         pointHoverRadius: 4,
       }],
     },
-    options: baseChartOptions({ xTickLimit: 12, xTickCallback, yTitle: "Minutes" }),
+    options: monthlyOptions,
   });
 }
 
