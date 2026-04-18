@@ -6,9 +6,13 @@ Exposes analytics endpoints, onboarding helpers, and import APIs.
 from datetime import datetime, timezone
 from pathlib import Path
 import json
+import logging
+import os
 import shutil
 import tempfile
 import zipfile
+
+logger = logging.getLogger(__name__)
 
 from fastapi import FastAPI, Query, HTTPException, UploadFile, File, Form
 from fastapi.responses import FileResponse
@@ -169,10 +173,32 @@ def _with_meta(data: Any, year: Optional[Any] = None, **extra_meta: Any) -> Dict
     }
 
 
+def _get_import_base() -> Path:
+    """Returns the base directory that import paths must be within."""
+    base = os.environ.get("SPOOLIFY_IMPORT_BASE")
+    if base:
+        return Path(base).expanduser().resolve()
+    return Path.home().resolve()
+
+
 def _discover_json_files(input_path: str) -> List[Path]:
     path = Path(input_path).expanduser().resolve()
+
+    # Prevent path traversal: ensure the resolved path is within the allowed base.
+    allowed_base = _get_import_base()
+    try:
+        path.relative_to(allowed_base)
+    except ValueError:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Import path must be within the allowed import directory. "
+                "Set SPOOLIFY_IMPORT_BASE to override."
+            ),
+        )
+
     if not path.exists():
-        raise HTTPException(status_code=400, detail=f"Path does not exist: {input_path}")
+        raise HTTPException(status_code=400, detail="Path does not exist")
 
     if path.is_file():
         if path.suffix.lower() != ".json":
@@ -251,7 +277,8 @@ def _validate_archive_files(files: List[Path], source_label: str, archive_type: 
             with file_path.open("r", encoding="utf-8") as f:
                 data = json.load(f)
         except Exception as exc:
-            issues.append(f"Failed to parse {file_path.name}: {exc}")
+            logger.error("Failed to parse %s: %s", file_path.name, exc, exc_info=True)
+            issues.append(f"Failed to parse {file_path.name}: invalid or unreadable JSON")
             continue
 
         if not isinstance(data, list):
@@ -367,7 +394,8 @@ def _import_archive_files(files: List[Path], mode: str) -> Dict[str, Any]:
             "files": file_summaries,
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Import failed: {str(e)}")
+        logger.error("Import failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail="Import failed")
     finally:
         conn.close()
 
@@ -640,7 +668,8 @@ def health():
             "message": "Spoolify API is running and database is accessible"
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+        logger.error("Database connectivity error: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail="Database error")
 
 
 @app.get("/stats")
@@ -672,7 +701,8 @@ def stats():
         }
         return _with_meta(payload)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
+        logger.error("Internal error in /stats: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @app.get("/top-artists")
@@ -687,7 +717,8 @@ def top_artists(limit: int = Query(10, ge=1, le=100)):
         payload = [{"name": artist, "minutes": int(minutes)} for artist, minutes in data]
         return _with_meta(payload)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
+        logger.error("Internal error in /top-artists: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @app.get("/top-tracks")
@@ -705,7 +736,8 @@ def top_tracks(limit: int = Query(10, ge=1, le=100)):
         ]
         return _with_meta(payload)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
+        logger.error("Internal error in /top-tracks: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @app.get("/monthly")
@@ -723,7 +755,8 @@ def monthly() -> Dict[str, Any]:
         ]
         return _with_meta(payload)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
+        logger.error("Internal error in /monthly: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @app.get("/yearly")
@@ -741,7 +774,8 @@ def yearly() -> Dict[str, Any]:
         ]
         return _with_meta(payload)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
+        logger.error("Internal error in /yearly: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @app.get("/hourly")
@@ -759,7 +793,8 @@ def hourly() -> Dict[str, Any]:
         ]
         return _with_meta(payload)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
+        logger.error("Internal error in /hourly: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @app.get("/trends")
@@ -772,7 +807,8 @@ def trends() -> Dict[str, Any]:
         conn.close()
         return _with_meta(data)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
+        logger.error("Internal error in /trends: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @app.get("/wrapped")
@@ -793,16 +829,17 @@ def wrapped(year: Optional[int] = Query(None, description="Specific year to anal
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
+        logger.error("Internal error in /wrapped: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @app.post("/onboarding/validate-archive")
 def onboarding_validate_archive(payload: ArchivePathRequest) -> Dict[str, Any]:
     """Validate Spotify archive structure before import."""
     files = _discover_json_files(payload.path)
-    source = str(Path(payload.path).expanduser())
-    archive_type = "directory" if Path(payload.path).expanduser().is_dir() else "file"
-    return _validate_archive_files(files, source_label=source, archive_type=archive_type)
+    # Determine archive type from the path string to avoid re-resolving user input.
+    archive_type = "file" if payload.path.strip().lower().endswith(".json") else "directory"
+    return _validate_archive_files(files, source_label=payload.path, archive_type=archive_type)
 
 
 @app.post("/onboarding/validate-archive-zip")
@@ -901,7 +938,8 @@ def dashboard_summary() -> Dict[str, Any]:
         conn.close()
         return _with_meta(payload)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
+        logger.error("Internal error in /dashboard-summary: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @app.get("/dashboard-summary-filtered")
@@ -997,7 +1035,8 @@ def dashboard_summary_filtered(start: Optional[str] = None, end: Optional[str] =
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
+        logger.error("Internal error in /dashboard-summary-filtered: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @app.get("/dashboard", include_in_schema=False)
