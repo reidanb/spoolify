@@ -24,6 +24,23 @@
   --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
 }
 
+body.dark-mode {
+  --primary: #a78bfa;
+  --primary-light: #c4b5fd;
+  --primary-lighter: #4c1d95;
+  --secondary: #f472b6;
+  --success: #34d399;
+  --warning: #fbbf24;
+  --error: #f87171;
+  --neutral-50: #1f2937;
+  --neutral-100: #111827;
+  --neutral-200: #1f2937;
+  --neutral-300: #374151;
+  --neutral-500: #9ca3af;
+  --neutral-700: #d1d5db;
+  --neutral-900: #f9fafb;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -35,6 +52,12 @@ body {
   background: linear-gradient(135deg, #fafaf9 0%, #f5f3ff 100%);
   color: var(--neutral-900);
   line-height: 1.6;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+body.dark-mode {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  color: var(--neutral-900);
 }
 
 .bg-shape {
@@ -52,6 +75,11 @@ body {
   right: -60px;
   background: #f8b26a;
   border-radius: 35% 65% 50% 50%;
+  transition: background-color 0.3s ease;
+}
+
+body.dark-mode .bg-shape-a {
+  background: #3d2817;
 }
 
 .bg-shape-b {
@@ -61,6 +89,11 @@ body {
   left: -70px;
   background: #77c8ba;
   border-radius: 62% 38% 41% 59%;
+  transition: background-color 0.3s ease;
+}
+
+body.dark-mode .bg-shape-b {
+  background: #1a3d38;
 }
 
 /* Dashboard Wrapper */
@@ -71,6 +104,11 @@ body {
   display: flex;
   flex-direction: column;
   background: linear-gradient(135deg, #fafaf9 0%, #f5f3ff 100%);
+  transition: background-color 0.3s ease;
+}
+
+body.dark-mode .dashboard-wrapper {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
 }
 
 /* Header */
@@ -81,6 +119,12 @@ body {
   padding: 2rem;
   box-shadow: var(--shadow-sm);
   animation: slideDown 0.6s ease-out;
+  transition: background 0.3s ease, border-color 0.3s ease;
+}
+
+body.dark-mode .dashboard-header {
+  background: linear-gradient(135deg, rgba(26, 26, 46, 0.95) 0%, rgba(22, 33, 62, 0.95) 100%);
+  border-bottom: 1px solid rgba(139, 92, 246, 0.2);
 }
 
 @keyframes slideDown {
@@ -174,11 +218,54 @@ body {
   background: transparent;
   color: var(--neutral-600);
   border: 1px solid var(--neutral-300);
+  transition: all 0.3s ease;
 }
 
 .btn-ghost:hover {
   background: var(--neutral-100);
   border-color: var(--neutral-400);
+}
+
+body.dark-mode .btn-ghost {
+  color: var(--neutral-700);
+  border: 1px solid var(--neutral-300);
+}
+
+body.dark-mode .btn-ghost:hover {
+  background: var(--neutral-200);
+  border-color: var(--neutral-500);
+}
+
+/* Theme Toggle Button */
+.theme-toggle-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid var(--neutral-300);
+  background: white;
+  color: var(--primary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  transition: all 0.3s ease;
+}
+
+.theme-toggle-btn:hover {
+  transform: scale(1.05);
+  background: var(--neutral-100);
+  box-shadow: var(--shadow-md);
+}
+
+body.dark-mode .theme-toggle-btn {
+  background: var(--neutral-200);
+  border-color: var(--neutral-300);
+  color: var(--primary);
+}
+
+body.dark-mode .theme-toggle-btn:hover {
+  background: var(--neutral-300);
 }
 
 /* Main Content */
@@ -188,6 +275,7 @@ body {
   width: 100%;
   margin: 0 auto;
   padding: 2rem;
+  transition: background-color 0.3s ease;
 }
 
 .section-group {
@@ -218,6 +306,12 @@ body {
   padding: 1.5rem;
   margin-bottom: 2rem;
   box-shadow: var(--shadow-sm);
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+body.dark-mode .date-range-container {
+  background: var(--neutral-200);
+  border-color: var(--neutral-300);
 }
 
 .date-range-header {
@@ -388,6 +482,11 @@ body {
   justify-content: center;
   gap: 1rem;
   z-index: 1000;
+  transition: background-color 0.3s ease;
+}
+
+body.dark-mode .loading-overlay {
+  background: rgba(26, 26, 46, 0.95);
 }
 
 .spinner {
@@ -479,6 +578,11 @@ body {
   transition: all 0.3s ease;
 }
 
+body.dark-mode .metric-card {
+  background: var(--neutral-200);
+  border: 1px solid rgba(139, 92, 246, 0.2);
+}
+
 .metric-card:hover {
   transform: translateY(-4px);
   box-shadow: var(--shadow-md);
@@ -538,6 +642,12 @@ body {
   padding: 1.5rem;
   box-shadow: var(--shadow-sm);
   border: 1px solid rgba(139, 92, 246, 0.05);
+  transition: all 0.3s ease;
+}
+
+body.dark-mode .chart-container {
+  background: var(--neutral-200);
+  border: 1px solid rgba(139, 92, 246, 0.15);
 }
 
 .chart-container-featured {
@@ -668,6 +778,12 @@ body {
   box-shadow: var(--shadow-sm);
   border: 1px solid rgba(139, 92, 246, 0.05);
   overflow-x: auto;
+  transition: all 0.3s ease;
+}
+
+body.dark-mode .table-container {
+  background: var(--neutral-200);
+  border: 1px solid rgba(139, 92, 246, 0.15);
 }
 
 .table-container h3 {
@@ -685,6 +801,11 @@ body {
 
 .data-table thead {
   background: var(--neutral-50);
+  transition: background-color 0.3s ease;
+}
+
+body.dark-mode .data-table thead {
+  background: var(--neutral-300);
 }
 
 .data-table th {
@@ -693,15 +814,31 @@ body {
   font-weight: 600;
   color: var(--neutral-700);
   border-bottom: 1px solid var(--neutral-200);
+  transition: color 0.3s ease, border-color 0.3s ease;
+}
+
+body.dark-mode .data-table th {
+  color: var(--neutral-500);
+  border-bottom-color: var(--neutral-400);
 }
 
 .data-table td {
   padding: 0.75rem;
   border-bottom: 1px solid var(--neutral-100);
+  transition: border-color 0.3s ease;
+}
+
+body.dark-mode .data-table td {
+  border-bottom: 1px solid var(--neutral-300);
 }
 
 .data-table tbody tr:hover {
   background: var(--neutral-50);
+  transition: background-color 0.2s ease;
+}
+
+body.dark-mode .data-table tbody tr:hover {
+  background: var(--neutral-300);
 }
 
 .data-table .rank {

@@ -59,6 +59,17 @@ function setupEventListeners() {
     });
   }
 
+  // Theme toggle listener
+  const themeToggle = document.getElementById("theme-toggle");
+  if (themeToggle) {
+    // Initialize theme from localStorage or system preference
+    initializeTheme();
+    
+    themeToggle.addEventListener("click", () => {
+      toggleTheme();
+    });
+  }
+
   // Date range slider listeners
   const sliderStart = document.getElementById("date-range-slider-start");
   const sliderEnd = document.getElementById("date-range-slider-end");
@@ -928,4 +939,41 @@ function escapeAttribute(text) {
   return String(text ?? "")
     .replace(/&/g, "&amp;")
     .replace(/"/g, "&quot;");
+}
+
+// Theme Toggle Functions
+function initializeTheme() {
+  const savedTheme = localStorage.getItem("theme");
+  const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+  const isDark = savedTheme ? savedTheme === "dark" : prefersDark;
+
+  if (isDark) {
+    document.body.classList.add("dark-mode");
+    updateThemeToggleButton(true);
+  } else {
+    document.body.classList.remove("dark-mode");
+    updateThemeToggleButton(false);
+  }
+}
+
+function toggleTheme() {
+  const isDark = document.body.classList.contains("dark-mode");
+  
+  if (isDark) {
+    document.body.classList.remove("dark-mode");
+    localStorage.setItem("theme", "light");
+    updateThemeToggleButton(false);
+  } else {
+    document.body.classList.add("dark-mode");
+    localStorage.setItem("theme", "dark");
+    updateThemeToggleButton(true);
+  }
+}
+
+function updateThemeToggleButton(isDark) {
+  const themeToggle = document.getElementById("theme-toggle");
+  if (themeToggle) {
+    themeToggle.textContent = isDark ? "☀️" : "🌙";
+    themeToggle.title = isDark ? "Switch to light mode" : "Switch to dark mode";
+  }
 }
