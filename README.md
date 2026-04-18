@@ -89,6 +89,9 @@ Optional environment variables:
 ```env
 SPOOLIFY_API_HOST=0.0.0.0
 SPOOLIFY_API_PORT=8000
+SPOOLIFY_LOG_LEVEL=INFO
+SPOOLIFY_LOG_FILE=spoolify.log
+SPOOLIFY_IMPORT_BASE=C:\Users\you
 ```
 
 Useful URLs after startup:
@@ -145,6 +148,9 @@ Spoolify uses a `.env` file for configuration. See `.env_example`:
 SPOOLIFY_DB_FILE=spoolify.db
 SPOOLIFY_API_HOST=0.0.0.0
 SPOOLIFY_API_PORT=8000
+SPOOLIFY_LOG_LEVEL=INFO          # DEBUG / INFO / WARNING / ERROR
+SPOOLIFY_LOG_FILE=spoolify.log   # Omit to log to stderr only
+SPOOLIFY_IMPORT_BASE=C:\Users\you  # Import paths must be inside this directory
 ```
 
 Copy `.env_example` to `.env` and adjust as needed:
