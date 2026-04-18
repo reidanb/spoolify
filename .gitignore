@@ -33,5 +33,7 @@ tests/stderr.log
 # Jupyter Notebook checkpoints
 .ipynb_checkpoints/
 
-# GitHub workflows
-.github/
+# Keep GitHub markdown docs local while allowing config files (e.g., dependabot.yml)
+.github/*.md
+
+
