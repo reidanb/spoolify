@@ -14,10 +14,13 @@
   <div class="bg-shape bg-shape-b" aria-hidden="true"></div>
 
   <main class="page">
-    <header class="hero reveal">
-      <p class="eyebrow">Onboarding</p>
-      <h1>Bring your Spotify history into Spoolify</h1>
-      <p class="subtitle">Import your full listening history once, then explore local stats, trends, and wrapped-style summaries without sending your data anywhere else.</p>
+    <header class="hero reveal" style="display: flex; justify-content: space-between; align-items: flex-start;">
+      <div style="flex: 1;">
+        <p class="eyebrow">Onboarding</p>
+        <h1>Bring your Spotify history into Spoolify</h1>
+        <p class="subtitle">Import your full listening history once, then explore local stats, trends, and wrapped-style summaries without sending your data anywhere else.</p>
+      </div>
+      <button id="theme-toggle" style="width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--line); background: var(--panel); color: var(--accent-2); cursor: pointer; font-size: 1.2rem; margin-top: 0.5rem; flex-shrink: 0;" title="Toggle Dark Mode" aria-label="Toggle dark mode">🌙</button>
     </header>
 
     <section class="panel wizard reveal">

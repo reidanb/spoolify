@@ -8,6 +8,16 @@
   --shadow: 0 20px 60px rgba(42, 34, 26, 0.14);
 }
 
+body.dark-mode {
+  --bg: #1a1a2e;
+  --ink: #f9fafb;
+  --panel: rgba(26, 26, 46, 0.8);
+  --line: #374151;
+  --accent: #ff9856;
+  --accent-2: #4db8a8;
+  --shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
 * {
   box-sizing: border-box;
 }
@@ -21,6 +31,13 @@ body {
     linear-gradient(160deg, #f6f1e8 0%, #efe3d4 100%);
   min-height: 100vh;
   overflow-x: hidden;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+body.dark-mode {
+  background: radial-gradient(circle at 8% 6%, #3d2817 0%, transparent 35%),
+    radial-gradient(circle at 80% 14%, #1a3d38 0%, transparent 32%),
+    linear-gradient(160deg, #1a1a2e 0%, #16213e 100%);
 }
 
 .bg-shape {
@@ -38,6 +55,11 @@ body {
   right: -60px;
   background: #f8b26a;
   border-radius: 35% 65% 50% 50%;
+  transition: background-color 0.3s ease;
+}
+
+body.dark-mode .bg-shape-a {
+  background: #3d2817;
 }
 
 .bg-shape-b {
@@ -47,6 +69,11 @@ body {
   left: -70px;
   background: #77c8ba;
   border-radius: 62% 38% 41% 59%;
+  transition: background-color 0.3s ease;
+}
+
+body.dark-mode .bg-shape-b {
+  background: #1a3d38;
 }
 
 .page {
@@ -149,6 +176,7 @@ body {
   backdrop-filter: blur(10px);
   border-radius: 16px;
   box-shadow: var(--shadow);
+  transition: all 0.3s ease;
 }
 
 .card {
