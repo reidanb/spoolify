@@ -130,7 +130,7 @@
           </div>
           <div id="done-results" class="result-grid" aria-live="polite"></div>
           <div class="action-row">
-            <a class="action-link" href="/stats">View Stats</a>
+            <a class="action-link" href="/dashboard">View Stats</a>
             <a class="action-link" href="/wrapped" target="_blank" rel="noreferrer">View Wrapped</a>
             <a class="action-link ghost-link" href="/docs" target="_blank" rel="noreferrer">Open API Docs</a>
           </div>
@@ -146,14 +146,14 @@
               <li>Set the app type to <strong>Web API</strong>. Save the app.</li>
               <li>Open the app settings and note your <strong>Client ID</strong> and <strong>Client Secret</strong>.</li>
             </ol>
-            <p style="margin: 0 0 0.5rem; color: #374154; font-weight: 600;">Step 2 — Add credentials to your local config</p>
-            <p style="margin: 0 0 0.4rem; color: #374154; line-height: 1.55;">Copy <code style="font-family: 'IBM Plex Mono', monospace; font-size: 0.88em; background: rgba(0,0,0,0.06); padding: 0.1em 0.35em; border-radius: 4px;">.env_example</code> to <code style="font-family: 'IBM Plex Mono', monospace; font-size: 0.88em; background: rgba(0,0,0,0.06); padding: 0.1em 0.35em; border-radius: 4px;">.env</code> and fill in the following keys:</p>
-            <pre style="margin: 0 0 0.8rem; padding: 0.75rem 0.9rem; background: #f9f7f2; border: 1px solid #d9d0c2; border-radius: 10px; font-family: 'IBM Plex Mono', monospace; font-size: 0.86rem; white-space: pre-wrap; line-height: 1.6;">SPOTIFY_CLIENT_ID=your_client_id_here
+            <p style="margin: 0 0 0.5rem; color: var(--ink); font-weight: 600;">Step 2 — Add credentials to your local config</p>
+            <p style="margin: 0 0 0.4rem; color: var(--ink); line-height: 1.55;">Copy <code style="font-family: 'IBM Plex Mono', monospace; font-size: 0.88em; background: rgba(128,128,128,0.12); padding: 0.1em 0.35em; border-radius: 4px;">.env_example</code> to <code style="font-family: 'IBM Plex Mono', monospace; font-size: 0.88em; background: rgba(128,128,128,0.12); padding: 0.1em 0.35em; border-radius: 4px;">.env</code> and fill in the following keys:</p>
+            <pre class="output" style="margin: 0 0 0.8rem; line-height: 1.6;">SPOTIFY_CLIENT_ID=your_client_id_here
 SPOTIFY_CLIENT_SECRET=your_client_secret_here
 SPOTIFY_REDIRECT_URI=http://localhost:8888/callback</pre>
-            <p style="margin: 0 0 0.4rem; color: #374154; font-weight: 600;">Required scopes</p>
-            <p style="margin: 0 0 0.65rem; color: #374154; line-height: 1.55;">When sync is set up, Spoolify will request these Spotify permissions: <code style="font-family: 'IBM Plex Mono', monospace; font-size: 0.88em; background: rgba(0,0,0,0.06); padding: 0.1em 0.35em; border-radius: 4px;">user-read-recently-played</code> and <code style="font-family: 'IBM Plex Mono', monospace; font-size: 0.88em; background: rgba(0,0,0,0.06); padding: 0.1em 0.35em; border-radius: 4px;">user-read-currently-playing</code>. No other scopes are required.</p>
-            <p style="margin: 0; color: #617086; font-size: 0.9rem; line-height: 1.5;">Your credentials stay in your local <code style="font-family: 'IBM Plex Mono', monospace; font-size: 0.88em;">.env</code> file and are never sent anywhere by Spoolify. Sync is a future capability — configuring this now just means you will be ready when it is available.</p>
+            <p style="margin: 0 0 0.4rem; color: var(--ink); font-weight: 600;">Required scopes</p>
+            <p style="margin: 0 0 0.65rem; color: var(--ink); line-height: 1.55;">When sync is set up, Spoolify will request these Spotify permissions: <code style="font-family: 'IBM Plex Mono', monospace; font-size: 0.88em; background: rgba(128,128,128,0.12); padding: 0.1em 0.35em; border-radius: 4px;">user-read-recently-played</code> and <code style="font-family: 'IBM Plex Mono', monospace; font-size: 0.88em; background: rgba(128,128,128,0.12); padding: 0.1em 0.35em; border-radius: 4px;">user-read-currently-playing</code>. No other scopes are required.</p>
+            <p style="margin: 0; color: var(--ink); opacity: 0.65; font-size: 0.9rem; line-height: 1.5;">Your credentials stay in your local <code style="font-family: 'IBM Plex Mono', monospace; font-size: 0.88em;">.env</code> file and are never sent anywhere by Spoolify. Sync is a future capability — configuring this now just means you will be ready when it is available.</p>
           </details>
         </div>
       </section>

@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Spoolify — Sign In</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/frontend/styles.css" />
+  <style>
+    .auth-wrap {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .auth-card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 2.5rem 2rem;
+      width: 100%;
+      max-width: 380px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(12px);
+    }
+    .auth-card h1 {
+      font-size: 1.5rem;
+      margin: 0 0 0.25rem;
+    }
+    .auth-card .subtitle {
+      font-size: 0.9rem;
+      margin: 0 0 1.75rem;
+      opacity: 0.65;
+    }
+    .auth-field {
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+      margin-bottom: 1rem;
+    }
+    .auth-field input {
+      width: 100%;
+      box-sizing: border-box;
+    }
+    .auth-btn {
+      width: 100%;
+      margin-top: 0.5rem;
+    }
+    .auth-error {
+      color: #dc2626;
+      font-size: 0.85rem;
+      margin-top: 0.75rem;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-shape bg-shape-a" aria-hidden="true"></div>
+  <div class="bg-shape bg-shape-b" aria-hidden="true"></div>
+
+  <div class="auth-wrap">
+    <div class="auth-card reveal">
+      <h1>Sign in to Spoolify</h1>
+      <p class="subtitle">Your listening history, locally.</p>
+
+      <form id="login-form" autocomplete="on">
+        <div class="auth-field">
+          <label for="username">Username</label>
+          <input type="text" id="username" name="username" autocomplete="username" required />
+        </div>
+        <div class="auth-field">
+          <label for="password">Password</label>
+          <input type="password" id="password" name="password" autocomplete="current-password" required />
+        </div>
+        <p class="auth-error" id="login-error"></p>
+        <button type="submit" class="auth-btn" id="login-btn">Sign in</button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById("login-form");
+    const errorEl = document.getElementById("login-error");
+    const btn = document.getElementById("login-btn");
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      errorEl.style.display = "none";
+      btn.disabled = true;
+      btn.textContent = "Signing in…";
+
+      const username = document.getElementById("username").value.trim();
+      const password = document.getElementById("password").value;
+
+      try {
+        const res = await fetch("/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username, password }),
+        });
+
+        if (res.ok) {
+          window.location.href = "/";
+        } else {
+          const data = await res.json();
+          errorEl.textContent = data.detail || "Invalid username or password.";
+          errorEl.style.display = "block";
+          btn.disabled = false;
+          btn.textContent = "Sign in";
+        }
+      } catch {
+        errorEl.textContent = "Could not reach the server. Is Spoolify running?";
+        errorEl.style.display = "block";
+        btn.disabled = false;
+        btn.textContent = "Sign in";
+      }
+    });
+
+    // Persist dark mode preference
+    if (localStorage.getItem("theme") === "dark") document.body.classList.add("dark-mode");
+  </script>
+</body>
+</html>

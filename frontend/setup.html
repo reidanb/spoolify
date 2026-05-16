@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Spoolify — Create Account</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/frontend/styles.css" />
+  <style>
+    .auth-wrap {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .auth-card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 2.5rem 2rem;
+      width: 100%;
+      max-width: 400px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(12px);
+    }
+    .auth-card h1 {
+      font-size: 1.5rem;
+      margin: 0 0 0.25rem;
+    }
+    .auth-card .subtitle {
+      font-size: 0.9rem;
+      margin: 0 0 1.75rem;
+      opacity: 0.65;
+    }
+    .auth-field {
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+      margin-bottom: 1rem;
+    }
+    .auth-field input {
+      width: 100%;
+      box-sizing: border-box;
+    }
+    .field-hint {
+      font-size: 0.8rem;
+      color: var(--ink);
+      opacity: 0.6;
+      margin: 0;
+    }
+    .auth-btn {
+      width: 100%;
+      margin-top: 0.5rem;
+    }
+    .auth-error {
+      color: #dc2626;
+      font-size: 0.85rem;
+      margin-top: 0.75rem;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-shape bg-shape-a" aria-hidden="true"></div>
+  <div class="bg-shape bg-shape-b" aria-hidden="true"></div>
+
+  <div class="auth-wrap">
+    <div class="auth-card reveal">
+      <h1>Create your account</h1>
+      <p class="subtitle">First-time setup — this account is stored locally on your machine.</p>
+
+      <form id="setup-form" autocomplete="on">
+        <div class="auth-field">
+          <label for="username">Username</label>
+          <input type="text" id="username" name="username" autocomplete="username" required />
+        </div>
+        <div class="auth-field">
+          <label for="password">Password</label>
+          <input type="password" id="password" name="password" autocomplete="new-password" required />
+        </div>
+        <div class="auth-field">
+          <label for="confirm">Confirm password</label>
+          <input type="password" id="confirm" name="confirm" autocomplete="new-password" required />
+        </div>
+        <p class="auth-error" id="setup-error"></p>
+        <button type="submit" class="auth-btn" id="setup-btn">Create account</button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById("setup-form");
+    const errorEl = document.getElementById("setup-error");
+    const btn = document.getElementById("setup-btn");
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      errorEl.style.display = "none";
+
+      const username = document.getElementById("username").value.trim();
+      const password = document.getElementById("password").value;
+      const confirm = document.getElementById("confirm").value;
+
+      if (!username) {
+        errorEl.textContent = "Username is required.";
+        errorEl.style.display = "block";
+        return;
+      }
+      if (password !== confirm) {
+        errorEl.textContent = "Passwords do not match.";
+        errorEl.style.display = "block";
+        return;
+      }
+      if (password.length < 8) {
+        errorEl.textContent = "Password must be at least 8 characters.";
+        errorEl.style.display = "block";
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = "Creating account…";
+
+      try {
+        const res = await fetch("/auth/setup", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username, password }),
+        });
+
+        if (res.ok) {
+          window.location.href = "/";
+        } else {
+          const data = await res.json();
+          errorEl.textContent = data.detail || "Could not create account.";
+          errorEl.style.display = "block";
+          btn.disabled = false;
+          btn.textContent = "Create account";
+        }
+      } catch {
+        errorEl.textContent = "Could not reach the server. Is Spoolify running?";
+        errorEl.style.display = "block";
+        btn.disabled = false;
+        btn.textContent = "Create account";
+      }
+    });
+
+    if (localStorage.getItem("theme") === "dark") document.body.classList.add("dark-mode");
+  </script>
+</body>
+</html>

@@ -8,38 +8,62 @@ from queries import (
 )
 
 def print_usage():
-    """Print CLI usage information."""
     exe = os.path.basename(sys.argv[0])
     print(f"""Usage:
-  {exe} import <path>              Import Spotify JSON file or directory
-  {exe} stats                      Show overall statistics
-  {exe} top-artists                Show top 10 artists by listening time
-  {exe} top-tracks                 Show top 10 tracks by listening time
-  {exe} monthly                    Show monthly listening stats
-  {exe} yearly                     Show yearly listening stats
-  {exe} hourly                     Show hour-of-day listening patterns
-  {exe} trends                     Show yearly trend analysis (JSON format)
-  {exe} insights                   Show listening insights and trends
-  {exe} wrapped [--year <year>]    Show yearly wrapped summary
-               [--json]""")
+  {exe} --user <username> import <path>     Import Spotify JSON file or directory
+  {exe} --user <username> stats             Show overall statistics
+  {exe} --user <username> top-artists       Show top 10 artists by listening time
+  {exe} --user <username> top-tracks        Show top 10 tracks by listening time
+  {exe} --user <username> monthly           Show monthly listening stats
+  {exe} --user <username> yearly            Show yearly listening stats
+  {exe} --user <username> hourly            Show hour-of-day listening patterns
+  {exe} --user <username> trends            Show yearly trend analysis (JSON format)
+  {exe} --user <username> insights          Show listening insights and trends
+  {exe} --user <username> wrapped [--year <year>] [--json]
+
+  Set SPOOLIFY_USER to avoid passing --user every time.""")
+
+def _resolve_user(args: list) -> tuple:
+    """Extract --user from args list, falling back to SPOOLIFY_USER env var."""
+    username = os.environ.get("SPOOLIFY_USER", "").strip()
+    if "--user" in args:
+        idx = args.index("--user")
+        if idx + 1 >= len(args):
+            print("Error: --user requires a username argument")
+            sys.exit(1)
+        username = args[idx + 1]
+        args = args[:idx] + args[idx + 2:]
+    if not username:
+        print("Error: username required. Use --user <username> or set SPOOLIFY_USER.")
+        sys.exit(1)
+    return username, args
+
 
 def main():
-    if len(sys.argv) < 2:
+    args = sys.argv[1:]
+
+    if not args:
         print_usage()
         sys.exit(1)
-    
-    command = sys.argv[1]
-    
+
+    username, args = _resolve_user(args)
+
+    if not args:
+        print_usage()
+        sys.exit(1)
+
+    command = args[0]
+
     # Import command
     if command == "import":
-        if len(sys.argv) < 3:
-            print(f"Usage: {os.path.basename(sys.argv[0])} import <spotify_json_file_or_dir>")
+        if len(args) < 2:
+            print(f"Usage: {os.path.basename(sys.argv[0])} --user <username> import <spotify_json_file_or_dir>")
             sys.exit(1)
-        path = sys.argv[2]
+        path = args[1]
         if not (os.path.isfile(path) or os.path.isdir(path)):
             print(f"File or directory not found: {path}")
             sys.exit(1)
-        conn = get_connection()
+        conn = get_connection(username)
         init_db(conn)
         if os.path.isdir(path):
             json_files = [os.path.join(path, f) for f in os.listdir(path) if f.lower().endswith('.json')]
@@ -54,9 +78,9 @@ def main():
             import_file(conn, path)
         conn.close()
         return
-    
+
     # All other commands require database connection
-    conn = get_connection()
+    conn = get_connection(username)
     init_db(conn)
     
     try:
@@ -90,14 +114,13 @@ def main():
             import json
             year = None
             as_json = False
-            
-            # Parse options
-            args = sys.argv[2:]
-            if "--json" in args:
+
+            wrapped_args = args[1:]
+            if "--json" in wrapped_args:
                 as_json = True
-                args.remove("--json")
-            if len(args) >= 2 and args[0] == "--year":
-                year = args[1]
+                wrapped_args.remove("--json")
+            if len(wrapped_args) >= 2 and wrapped_args[0] == "--year":
+                year = wrapped_args[1]
             
             result = get_wrapped(conn, year)
             

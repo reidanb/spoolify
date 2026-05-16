@@ -14,12 +14,17 @@ import zipfile
 
 logger = logging.getLogger(__name__)
 
-from fastapi import FastAPI, Query, HTTPException, UploadFile, File, Form
-from fastapi.responses import FileResponse
+from fastapi import FastAPI, Query, HTTPException, UploadFile, File, Form, Cookie, Depends
+from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
-from db import get_connection, init_db
+from db import get_connection, init_db, list_users
+from auth import (
+    user_count, create_user, verify_user,
+    make_session_token, verify_session_token,
+    SESSION_COOKIE, SESSION_MAX_AGE,
+)
 from importer import import_file_stats
 from query_data import (
     get_top_artists, get_top_tracks, get_monthly_stats, 
@@ -39,6 +44,29 @@ app = FastAPI(
     description="FastAPI service for Spotify listening analytics and onboarding",
     version="1.0.0"
 )
+
+
+def get_current_user(spoolify_session: Optional[str] = Cookie(None)) -> str:
+    """FastAPI dependency for API routes — returns username or raises 401."""
+    username = verify_session_token(spoolify_session) if spoolify_session else None
+    if not username:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    return username
+
+
+def session_user(spoolify_session: Optional[str] = Cookie(None)) -> Optional[str]:
+    """FastAPI dependency for page routes — returns username or None (no error)."""
+    return verify_session_token(spoolify_session) if spoolify_session else None
+
+
+def _set_session_cookie(response, username: str) -> None:
+    response.set_cookie(
+        SESSION_COOKIE,
+        make_session_token(username),
+        max_age=SESSION_MAX_AGE,
+        httponly=True,
+        samesite="lax",
+    )
 
 API_SCHEMA_VERSION = "2.0.0"
 
@@ -146,13 +174,47 @@ class StatsResponse(BaseModel):
     top_tracks: List[Track]
 
 
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+
+class SetupRequest(BaseModel):
+    username: str
+    password: str
+
+
 class ArchivePathRequest(BaseModel):
     path: str
+    user: Optional[str] = None
 
 
 class OnboardingImportRequest(BaseModel):
     path: str
+    user: Optional[str] = None
     mode: str = "historical_backfill"
+
+
+def _extract_username_from_files(files: List[Path]) -> Optional[str]:
+    """Detect Spotify username from the username field present in streaming history entries."""
+    for file_path in files[:3]:
+        try:
+            with file_path.open("r", encoding="utf-8") as f:
+                data = json.load(f)
+            if not isinstance(data, list):
+                continue
+            for entry in data[:10]:
+                if isinstance(entry, dict):
+                    raw = entry.get("username", "")
+                    if raw and isinstance(raw, str):
+                        candidate = raw.strip()
+                        try:
+                            return _safe_username(candidate)
+                        except ValueError:
+                            continue
+        except Exception:
+            continue
+    return None
 
 
 def _generated_at_utc() -> str:
@@ -242,7 +304,7 @@ def _detect_account_export_markers(files: List[Path]) -> List[str]:
     return sorted(markers_found)
 
 
-def _validate_archive_files(files: List[Path], source_label: str, archive_type: str) -> Dict[str, Any]:
+def _validate_archive_files(files: List[Path], source_label: str, archive_type: str, username: Optional[str] = None) -> Dict[str, Any]:
     expected_keys = {
         "ts",
         "ms_played",
@@ -310,12 +372,16 @@ def _validate_archive_files(files: List[Path], source_label: str, archive_type: 
     if sampled_entries == 0:
         issues.append("No valid entries found while sampling archive files.")
 
-    conn = get_connection()
-    init_db(conn)
-    db_total_rows = _get_db_total_rows(conn)
-    db_latest_ts = _get_db_latest_ts(conn)
+    if username:
+        conn = get_connection(username)
+        init_db(conn)
+        db_total_rows = _get_db_total_rows(conn)
+        db_latest_ts = _get_db_latest_ts(conn)
+        conn.close()
+    else:
+        db_total_rows = 0
+        db_latest_ts = None
     recommendation = _recommend_mode(db_total_rows, max_ts, db_latest_ts)
-    conn.close()
 
     key_match_pct = round((expected_key_hits / expected_key_checks) * 100, 2) if expected_key_checks else 0.0
 
@@ -344,7 +410,7 @@ def _validate_archive_files(files: List[Path], source_label: str, archive_type: 
     }
 
 
-def _import_archive_files(files: List[Path], mode: str) -> Dict[str, Any]:
+def _import_archive_files(files: List[Path], mode: str, username: Optional[str] = None) -> Dict[str, Any]:
     if mode not in {"historical_backfill", "ongoing_sync_prep"}:
         raise HTTPException(status_code=400, detail="mode must be either historical_backfill or ongoing_sync_prep")
 
@@ -359,7 +425,12 @@ def _import_archive_files(files: List[Path], mode: str) -> Dict[str, Any]:
             ),
         )
 
-    conn = get_connection()
+    if not username:
+        username = _extract_username_from_files(files)
+    if not username:
+        raise HTTPException(status_code=400, detail="Could not detect Spotify username from archive. Pass user explicitly.")
+
+    conn = get_connection(username)
     init_db(conn)
 
     totals = {
@@ -388,6 +459,7 @@ def _import_archive_files(files: List[Path], mode: str) -> Dict[str, Any]:
 
         totals["total_rows"] = _get_db_total_rows(conn)
         return {
+            "user": username,
             "mode": mode,
             "files_processed": len(files),
             "totals": totals,
@@ -648,9 +720,69 @@ def _build_profile_from_hourly_rows(hourly_rows: List[Any]) -> Dict[str, Any]:
 # ENDPOINTS
 # ==============================================================================
 
+@app.get("/login", include_in_schema=False)
+def login_page(user: Optional[str] = Depends(session_user)):
+    if user:
+        return RedirectResponse("/", status_code=302)
+    if user_count() == 0:
+        return RedirectResponse("/setup", status_code=302)
+    page = FRONTEND_DIR / "login.html"
+    if not page.exists():
+        raise HTTPException(status_code=500, detail="Login page missing")
+    return FileResponse(page)
+
+
+@app.get("/setup", include_in_schema=False)
+def setup_page(user: Optional[str] = Depends(session_user)):
+    if user_count() > 0:
+        return RedirectResponse("/login", status_code=302)
+    page = FRONTEND_DIR / "setup.html"
+    if not page.exists():
+        raise HTTPException(status_code=500, detail="Setup page missing")
+    return FileResponse(page)
+
+
+@app.post("/auth/setup")
+def auth_setup(payload: SetupRequest):
+    if user_count() > 0:
+        raise HTTPException(status_code=403, detail="Setup already complete")
+    if not payload.username.strip() or not payload.password:
+        raise HTTPException(status_code=400, detail="Username and password are required")
+    ok = create_user(payload.username.strip(), payload.password)
+    if not ok:
+        raise HTTPException(status_code=409, detail="Username already taken")
+    from fastapi.responses import JSONResponse
+    response = JSONResponse({"ok": True, "username": payload.username.strip()})
+    _set_session_cookie(response, payload.username.strip())
+    return response
+
+
+@app.post("/auth/login")
+def auth_login(payload: LoginRequest):
+    if not verify_user(payload.username, payload.password):
+        raise HTTPException(status_code=401, detail="Invalid username or password")
+    from fastapi.responses import JSONResponse
+    response = JSONResponse({"ok": True, "username": payload.username})
+    _set_session_cookie(response, payload.username)
+    return response
+
+
+@app.post("/auth/logout", include_in_schema=False)
+def auth_logout():
+    response = RedirectResponse("/login", status_code=302)
+    response.delete_cookie(SESSION_COOKIE)
+    return response
+
+
+@app.get("/auth/me")
+def auth_me(current_user: str = Depends(get_current_user)):
+    return {"username": current_user}
+
+
 @app.get("/", include_in_schema=False)
-def onboarding_home():
-    """Serve the onboarding frontend."""
+def onboarding_home(user: Optional[str] = Depends(session_user)):
+    if not user:
+        return RedirectResponse("/login", status_code=302)
     index = FRONTEND_DIR / "index.html"
     if not index.exists():
         raise HTTPException(status_code=500, detail="Frontend assets are missing")
@@ -659,24 +791,23 @@ def onboarding_home():
 @app.get("/health", response_model=HealthResponse)
 def health():
     """Health check endpoint."""
-    try:
-        conn = get_connection()
-        init_db(conn)
-        conn.close()
-        return {
-            "status": "healthy",
-            "message": "Spoolify API is running and database is accessible"
-        }
-    except Exception as e:
-        logger.error("Database connectivity error: %s", e, exc_info=True)
-        raise HTTPException(status_code=500, detail="Database error")
+    return {
+        "status": "healthy",
+        "message": "Spoolify API is running"
+    }
+
+
+@app.get("/users")
+def users():
+    """List all users with imported data."""
+    return {"users": list_users()}
 
 
 @app.get("/stats")
-def stats():
+def stats(current_user: str = Depends(get_current_user)):
     """Get comprehensive listening statistics."""
     try:
-        conn = get_connection()
+        conn = get_connection(current_user)
         init_db(conn)
         
         overall = get_overall_stats(conn)
@@ -706,10 +837,10 @@ def stats():
 
 
 @app.get("/top-artists")
-def top_artists(limit: int = Query(10, ge=1, le=100)):
+def top_artists(current_user: str = Depends(get_current_user), limit: int = Query(10, ge=1, le=100)):
     """Get top artists by listening time."""
     try:
-        conn = get_connection()
+        conn = get_connection(current_user)
         init_db(conn)
         data = get_top_artists(conn, limit=limit)
         conn.close()
@@ -722,10 +853,10 @@ def top_artists(limit: int = Query(10, ge=1, le=100)):
 
 
 @app.get("/top-tracks")
-def top_tracks(limit: int = Query(10, ge=1, le=100)):
+def top_tracks(current_user: str = Depends(get_current_user), limit: int = Query(10, ge=1, le=100)):
     """Get top tracks by listening time."""
     try:
-        conn = get_connection()
+        conn = get_connection(current_user)
         init_db(conn)
         data = get_top_tracks(conn, limit=limit)
         conn.close()
@@ -741,10 +872,10 @@ def top_tracks(limit: int = Query(10, ge=1, le=100)):
 
 
 @app.get("/monthly")
-def monthly() -> Dict[str, Any]:
+def monthly(current_user: str = Depends(get_current_user)) -> Dict[str, Any]:
     """Get monthly listening statistics."""
     try:
-        conn = get_connection()
+        conn = get_connection(current_user)
         init_db(conn)
         data = get_monthly_stats(conn)
         conn.close()
@@ -760,10 +891,10 @@ def monthly() -> Dict[str, Any]:
 
 
 @app.get("/yearly")
-def yearly() -> Dict[str, Any]:
+def yearly(current_user: str = Depends(get_current_user)) -> Dict[str, Any]:
     """Get yearly listening statistics."""
     try:
-        conn = get_connection()
+        conn = get_connection(current_user)
         init_db(conn)
         data = get_yearly_stats(conn)
         conn.close()
@@ -779,10 +910,10 @@ def yearly() -> Dict[str, Any]:
 
 
 @app.get("/hourly")
-def hourly() -> Dict[str, Any]:
+def hourly(current_user: str = Depends(get_current_user)) -> Dict[str, Any]:
     """Get hour-of-day listening statistics."""
     try:
-        conn = get_connection()
+        conn = get_connection(current_user)
         init_db(conn)
         data = get_hourly_stats(conn)
         conn.close()
@@ -798,10 +929,10 @@ def hourly() -> Dict[str, Any]:
 
 
 @app.get("/trends")
-def trends() -> Dict[str, Any]:
+def trends(current_user: str = Depends(get_current_user)) -> Dict[str, Any]:
     """Get yearly trend analysis."""
     try:
-        conn = get_connection()
+        conn = get_connection(current_user)
         init_db(conn)
         data = get_yearly_trend(conn)
         conn.close()
@@ -812,10 +943,10 @@ def trends() -> Dict[str, Any]:
 
 
 @app.get("/wrapped")
-def wrapped(year: Optional[int] = Query(None, description="Specific year to analyze (defaults to most recent)")):
+def wrapped(current_user: str = Depends(get_current_user), year: Optional[int] = Query(None, description="Specific year to analyze (defaults to most recent)")):
     """Get wrapped summary for a year."""
     try:
-        conn = get_connection()
+        conn = get_connection(current_user)
         init_db(conn)
         year_str = str(year) if year else None
         data = get_wrapped(conn, year_str)
@@ -834,53 +965,54 @@ def wrapped(year: Optional[int] = Query(None, description="Specific year to anal
 
 
 @app.post("/onboarding/validate-archive")
-def onboarding_validate_archive(payload: ArchivePathRequest) -> Dict[str, Any]:
+def onboarding_validate_archive(payload: ArchivePathRequest, current_user: str = Depends(get_current_user)) -> Dict[str, Any]:
     """Validate Spotify archive structure before import."""
     files = _discover_json_files(payload.path)
-    # Determine archive type from the path string to avoid re-resolving user input.
     archive_type = "file" if payload.path.strip().lower().endswith(".json") else "directory"
-    return _validate_archive_files(files, source_label=payload.path, archive_type=archive_type)
+    return _validate_archive_files(files, source_label=payload.path, archive_type=archive_type, username=current_user)
 
 
 @app.post("/onboarding/validate-archive-zip")
-async def onboarding_validate_archive_zip(file: UploadFile = File(...)) -> Dict[str, Any]:
+async def onboarding_validate_archive_zip(file: UploadFile = File(...), current_user: str = Depends(get_current_user)) -> Dict[str, Any]:
     """Validate Spotify archive from uploaded ZIP file."""
     staged_files = _extract_zip_json_files(file)
     try:
         return _validate_archive_files(
             staged_files,
             source_label=file.filename or "uploaded.zip",
-            archive_type="zip_upload"
+            archive_type="zip_upload",
+            username=current_user,
         )
     finally:
         _cleanup_staged_files(staged_files)
 
 
 @app.post("/onboarding/import")
-def onboarding_import_archive(payload: OnboardingImportRequest) -> Dict[str, Any]:
+def onboarding_import_archive(payload: OnboardingImportRequest, current_user: str = Depends(get_current_user)) -> Dict[str, Any]:
     """Import Spotify archive files through onboarding flow."""
     files = _discover_json_files(payload.path)
-    return _import_archive_files(files, mode=payload.mode)
+    return _import_archive_files(files, mode=payload.mode, username=current_user)
 
 
 @app.post("/onboarding/import-zip")
 async def onboarding_import_archive_zip(
     file: UploadFile = File(...),
-    mode: str = Form("historical_backfill")
+    mode: str = Form("historical_backfill"),
+    current_user: str = Depends(get_current_user),
 ) -> Dict[str, Any]:
     """Import Spotify archive from uploaded ZIP file."""
     staged_files = _extract_zip_json_files(file)
     try:
-        return _import_archive_files(staged_files, mode=mode)
+        return _import_archive_files(staged_files, mode=mode, username=current_user)
     finally:
         _cleanup_staged_files(staged_files)
 
 
 @app.get("/dashboard-summary")
-def dashboard_summary() -> Dict[str, Any]:
+def dashboard_summary(current_user: str = Depends(get_current_user)) -> Dict[str, Any]:
     """Get comprehensive dashboard summary with aggregated stats."""
     try:
-        conn = get_connection()
+        conn = get_connection(current_user)
         init_db(conn)
         
         # Get all the data needed for the dashboard
@@ -943,18 +1075,17 @@ def dashboard_summary() -> Dict[str, Any]:
 
 
 @app.get("/dashboard-summary-filtered")
-def dashboard_summary_filtered(start: Optional[str] = None, end: Optional[str] = None) -> Dict[str, Any]:
+def dashboard_summary_filtered(current_user: str = Depends(get_current_user), start: Optional[str] = None, end: Optional[str] = None) -> Dict[str, Any]:
     """Get dashboard summary filtered by date range (YYYY-MM format)."""
     try:
-        # Validate date format
         if start:
             if len(start) != 7 or start[4] != "-":
                 raise HTTPException(status_code=400, detail="start must be in YYYY-MM format")
         if end:
             if len(end) != 7 or end[4] != "-":
                 raise HTTPException(status_code=400, detail="end must be in YYYY-MM format")
-        
-        conn = get_connection()
+
+        conn = get_connection(current_user)
         init_db(conn)
 
         overall = get_overall_stats_filtered(conn, start, end)
@@ -1040,8 +1171,9 @@ def dashboard_summary_filtered(start: Optional[str] = None, end: Optional[str] =
 
 
 @app.get("/dashboard", include_in_schema=False)
-def dashboard_page():
-    """Serve the dashboard frontend."""
+def dashboard_page(user: Optional[str] = Depends(session_user)):
+    if not user:
+        return RedirectResponse("/login", status_code=302)
     dashboard_file = FRONTEND_DIR / "dashboard.html"
     if not dashboard_file.exists():
         raise HTTPException(status_code=500, detail="Dashboard assets are missing")
