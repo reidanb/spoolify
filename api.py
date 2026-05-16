@@ -14,7 +14,7 @@ import zipfile
 
 logger = logging.getLogger(__name__)
 
-from fastapi import FastAPI, Query, HTTPException, UploadFile, File, Form, Cookie, Depends
+from fastapi import FastAPI, Query, HTTPException, UploadFile, File, Form, Cookie, Depends, Request
 from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -780,9 +780,20 @@ def auth_me(current_user: str = Depends(get_current_user)):
 
 
 @app.get("/", include_in_schema=False)
-def onboarding_home(user: Optional[str] = Depends(session_user)):
+def onboarding_home(request: Request, user: Optional[str] = Depends(session_user)):
     if not user:
         return RedirectResponse("/login", status_code=302)
+    force_import = request.query_params.get("import") == "1"
+    if not force_import:
+        try:
+            conn = get_connection(user)
+            init_db(conn)
+            count = conn.execute("SELECT COUNT(*) FROM plays").fetchone()[0]
+            conn.close()
+            if count > 0:
+                return RedirectResponse("/dashboard", status_code=302)
+        except Exception:
+            pass
     index = FRONTEND_DIR / "index.html"
     if not index.exists():
         raise HTTPException(status_code=500, detail="Frontend assets are missing")
