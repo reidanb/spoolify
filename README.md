@@ -21,12 +21,13 @@
 ## ⚡ Features
 
 - Import Spotify Extended Streaming History JSON (file or directory)
-- Local SQLite storage
+- Multi-user support — each account gets its own isolated SQLite database
+- Local auth with bcrypt-hashed credentials (no email, no external service)
 - Idempotent inserts (no duplicates)
 - High-performance bulk insert
 - CLI analytics commands (stats, top artists/tracks, monthly/yearly/hourly, trends, wrapped)
 - Read-only FastAPI web API for dashboards, scripts, and integrations
-- No API or account required
+- No Spotify API or account required
 
 ---
 
@@ -34,38 +35,25 @@
 
 ### CLI Mode
 
-Run commands directly with `main.py`:
+All CLI commands require a username. Pass it with `--user` or set `SPOOLIFY_USER` in your environment to avoid repeating it:
 
 ```sh
-python main.py import <path_to_json_or_directory>
+python entrypoint.py --user <username> import <path_to_json_or_directory>
+python entrypoint.py --user <username> stats
+python entrypoint.py --user <username> top-artists
+python entrypoint.py --user <username> top-tracks
+python entrypoint.py --user <username> monthly
+python entrypoint.py --user <username> yearly
+python entrypoint.py --user <username> hourly
+python entrypoint.py --user <username> trends
+python entrypoint.py --user <username> insights
+python entrypoint.py --user <username> wrapped --year 2025 --json
 ```
 
-Or use the unified entrypoint:
+To reset a local account password from the shell:
 
 ```sh
-python entrypoint.py <cli-command>
-```
-
-Common commands:
-
-```sh
-python main.py import "C:/path/to/Spotify Extended Streaming History"
-python main.py stats
-python main.py top-artists
-python main.py top-tracks
-python main.py monthly
-python main.py yearly
-python main.py hourly
-python main.py trends
-python main.py insights
-python main.py wrapped --year 2025 --json
-```
-
-Examples:
-
-```sh
-python main.py import "Streaming_History_Audio_2025-2026_10.json"
-python entrypoint.py import "C:/Users/nonadmin_reidan/Downloads/Spotify Extended Streaming History"
+python entrypoint.py reset-password <username>
 ```
 
 Example output:
@@ -120,14 +108,26 @@ Main endpoints:
 - `POST /onboarding/validate-archive-zip`
 - `POST /onboarding/import-zip`
 
+Auth endpoints:
+
+- `GET /login` — login page
+- `GET /setup` — first-run account creation page
+- `POST /auth/setup` — create first account
+- `POST /auth/login` — sign in, sets session cookie
+- `POST /auth/logout` — sign out, clears cookie
+- `GET /auth/me` — returns current authenticated username
+- `GET /users` — list users with a local database
+
 See full API details in `docs/API.md`.
 
 ### Frontend Routes
 
 When API mode is running:
 
-- `http://localhost:8000/` serves onboarding/import flow
-- `http://localhost:8000/dashboard` serves the main listening hub after import
+- `http://localhost:8000/` — onboarding/import flow (redirects to `/login` if not authenticated, `/dashboard` if data already exists)
+- `http://localhost:8000/setup` — first-run account creation
+- `http://localhost:8000/login` — sign in
+- `http://localhost:8000/dashboard` — main listening hub after import
 
 The onboarding flow helps you:
 
@@ -145,7 +145,8 @@ The onboarding flow helps you:
 Spoolify uses a `.env` file for configuration. See `.env_example`:
 
 ```
-SPOOLIFY_DB_FILE=spoolify.db
+SPOOLIFY_DATA_DIR=data           # Directory for per-user databases and auth.db
+SPOOLIFY_SECRET_KEY=             # Optional — auto-generated at data/.secret_key if absent
 SPOOLIFY_API_HOST=0.0.0.0
 SPOOLIFY_API_PORT=8000
 SPOOLIFY_LOG_LEVEL=INFO          # DEBUG / INFO / WARNING / ERROR
@@ -206,7 +207,7 @@ CLI mode works with the standard library.
 API mode requires:
 
 ```sh
-pip install fastapi uvicorn python-multipart
+pip install fastapi uvicorn python-multipart bcrypt itsdangerous
 ```
 
 ---
@@ -217,11 +218,20 @@ pip install fastapi uvicorn python-multipart
 Spoolify/
 ├── entrypoint.py
 ├── api.py
+├── auth.py
 ├── query_data.py
 ├── main.py
 ├── db.py
 ├── queries.py
 ├── importer.py
+├── frontend/
+│   ├── index.html
+│   ├── login.html
+│   ├── setup.html
+│   ├── dashboard.html
+│   ├── app.js
+│   ├── dashboard.js
+│   └── styles.css
 ├── tests/
 │   ├── perf_import.ps1
 │   └── tests.json
