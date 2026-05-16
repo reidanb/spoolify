@@ -67,6 +67,22 @@ def create_user(username: str, password: str) -> bool:
         conn.close()
 
 
+def user_exists(username: str) -> bool:
+    conn = _auth_conn()
+    row = conn.execute("SELECT 1 FROM users WHERE username = ?", (username,)).fetchone()
+    conn.close()
+    return row is not None
+
+
+def reset_password(username: str, new_password: str) -> bool:
+    pw_hash = bcrypt.hashpw(new_password.encode(), bcrypt.gensalt()).decode()
+    conn = _auth_conn()
+    cur = conn.execute("UPDATE users SET password_hash = ? WHERE username = ?", (pw_hash, username))
+    conn.commit()
+    conn.close()
+    return cur.rowcount > 0
+
+
 def verify_user(username: str, password: str) -> bool:
     conn = _auth_conn()
     row = conn.execute("SELECT password_hash FROM users WHERE username = ?", (username,)).fetchone()
