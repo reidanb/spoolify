@@ -80,15 +80,15 @@
 
 ---
 
-## Phase 7 — Onboarding & Data Acquisition (In Progress)
-- First-run onboarding flow
-- Guide users through requesting Spotify Extended Streaming History
-- Explain Spotify export wait time and expected archive contents
-- Validate downloaded archive structure before import
-- Distinguish historical backfill from ongoing sync
-- Add onboarding for Spotify Developer app creation
-- Explain required scopes, redirect URIs, and local configuration
-- Keep privacy-first positioning clear throughout setup
+## Phase 7 — Onboarding & Data Acquisition ✅
+- First-run onboarding flow ✅
+- Guide users through requesting Spotify Extended Streaming History ✅
+- Explain Spotify export wait time and expected archive contents ✅
+- Validate downloaded archive structure before import ✅
+- Distinguish historical backfill from ongoing sync ✅
+- Add onboarding for Spotify Developer app creation ✅
+- Explain required scopes, redirect URIs, and local configuration ✅
+- Keep privacy-first positioning clear throughout setup ✅
 
 ---
 

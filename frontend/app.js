@@ -720,26 +720,27 @@ importZipBtn.addEventListener("click", async () => {
   }
 });
 
-// Check if database has data on page load; redirect to dashboard if it does
+// Check if database has data on page load; redirect to dashboard if it does.
+// Skip the redirect if ?import=1 is present — that signals an intentional
+// navigation from the dashboard's "Import More Data" / "Go to Import Flow" links.
 async function checkAndRedirectIfDataExists() {
-  try {
-    const response = await fetch("/stats");
-    if (response.ok) {
-      const data = await response.json();
-      const stats = data.data || data;
-      
-      // If there's data in the database (overall stats with plays > 0), redirect to dashboard
-      if (stats.overall && stats.overall.total_plays > 0) {
-        window.location.href = "/dashboard";
-        return;
+  const forceImport = new URLSearchParams(window.location.search).get("import") === "1";
+  if (!forceImport) {
+    try {
+      const response = await fetch("/stats");
+      if (response.ok) {
+        const data = await response.json();
+        const stats = data.data || data;
+        if (stats.overall && stats.overall.total_plays > 0) {
+          window.location.href = "/dashboard";
+          return;
+        }
       }
+    } catch (error) {
+      console.log("No existing data or error checking stats, showing onboarding");
     }
-  } catch (error) {
-    // If stats endpoint fails or database is empty, stay on onboarding
-    console.log("No existing data or error checking stats, showing onboarding");
   }
-  
-  // Show onboarding if no data exists
+
   resetFlow();
 }
 

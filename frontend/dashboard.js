@@ -55,7 +55,7 @@ function setupEventListeners() {
 
   if (btnImport) {
     btnImport.addEventListener("click", () => {
-      window.location.href = "/";
+      window.location.href = "/?import=1";
     });
   }
 
