@@ -44,6 +44,37 @@ def run_cli():
     main()
 
 
+def _run_reset_password():
+    import getpass
+    from auth import user_exists, reset_password
+
+    if len(sys.argv) < 3:
+        print("Usage: python entrypoint.py reset-password <username>")
+        sys.exit(1)
+
+    username = sys.argv[2]
+    if not user_exists(username):
+        print(f"Error: no account found for '{username}'")
+        sys.exit(1)
+
+    try:
+        new_password = getpass.getpass(f"New password for {username}: ")
+        confirm = getpass.getpass("Confirm new password: ")
+    except (KeyboardInterrupt, EOFError):
+        print("\nCancelled.")
+        sys.exit(1)
+
+    if new_password != confirm:
+        print("Error: passwords do not match")
+        sys.exit(1)
+    if len(new_password) < 8:
+        print("Error: password must be at least 8 characters")
+        sys.exit(1)
+
+    reset_password(username, new_password)
+    print(f"Password updated for '{username}'")
+
+
 def run_api():
     """Run API server."""
     _configure_logging()
@@ -71,8 +102,9 @@ def main():
     """Main entry point: route to CLI or API."""
     if len(sys.argv) < 2:
         print("Usage:")
-        print("  python entrypoint.py serve              Start FastAPI server")
-        print("  python entrypoint.py <cli-command> ...  Run CLI command")
+        print("  python entrypoint.py serve                        Start FastAPI server")
+        print("  python entrypoint.py reset-password <username>    Reset a user's password")
+        print("  python entrypoint.py <cli-command> ...            Run CLI command")
         print()
         print("Available CLI commands:")
         print("  import <path>    Import Spotify JSON file or directory")
@@ -88,11 +120,12 @@ def main():
         sys.exit(1)
     
     command = sys.argv[1]
-    
+
     if command == "serve":
         run_api()
+    elif command == "reset-password":
+        _run_reset_password()
     else:
-        # Run as CLI
         run_cli()
 
 
