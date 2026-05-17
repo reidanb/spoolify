@@ -953,7 +953,17 @@ def trends(current_user: str = Depends(get_current_user)) -> Dict[str, Any]:
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@app.get("/wrapped")
+@app.get("/wrapped", include_in_schema=False)
+def wrapped_page(user: Optional[str] = Depends(session_user)):
+    if not user:
+        return RedirectResponse("/login", status_code=302)
+    wrapped_file = FRONTEND_DIR / "wrapped.html"
+    if not wrapped_file.exists():
+        raise HTTPException(status_code=500, detail="Wrapped page is missing")
+    return FileResponse(wrapped_file)
+
+
+@app.get("/api/wrapped")
 def wrapped(current_user: str = Depends(get_current_user), year: Optional[int] = Query(None, description="Specific year to analyze (defaults to most recent)")):
     """Get wrapped summary for a year."""
     try:
@@ -962,16 +972,16 @@ def wrapped(current_user: str = Depends(get_current_user), year: Optional[int] =
         year_str = str(year) if year else None
         data = get_wrapped(conn, year_str)
         conn.close()
-        
+
         if "error" in data:
             raise HTTPException(status_code=404, detail=data["error"])
-        
+
         wrapped_year = data.get("year") if isinstance(data, dict) else year
         return _with_meta(data, year=wrapped_year)
     except HTTPException:
         raise
     except Exception as e:
-        logger.error("Internal error in /wrapped: %s", e, exc_info=True)
+        logger.error("Internal error in /api/wrapped: %s", e, exc_info=True)
         raise HTTPException(status_code=500, detail="Internal server error")
 
 

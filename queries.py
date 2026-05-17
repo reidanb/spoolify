@@ -1,4 +1,148 @@
 import json
+from datetime import date
+
+
+# ── Wrapped helpers ────────────────────────────────────────────────────────────
+
+def _heatmap(cur, year_str):
+    cur.execute('''
+        SELECT DATE(ts) AS day, SUM(ms_played)/60000 AS minutes, COUNT(*) AS plays
+        FROM plays WHERE ts IS NOT NULL AND substr(ts,1,4)=?
+        GROUP BY day ORDER BY day
+    ''', (year_str,))
+    return [{"date": d, "minutes": int(m), "plays": p} for d, m, p in cur.fetchall()]
+
+
+def _streaks(heatmap_rows, year_int):
+    dates = sorted(set(r["date"] for r in heatmap_rows))
+    if not dates:
+        return {"longest": 0, "active_days": 0}
+    longest = cur_len = 1
+    for i in range(1, len(dates)):
+        gap = (date.fromisoformat(dates[i]) - date.fromisoformat(dates[i-1])).days
+        cur_len = cur_len + 1 if gap == 1 else 1
+        if cur_len > longest:
+            longest = cur_len
+    return {"longest": longest, "active_days": len(dates)}
+
+
+def _most_active_day(heatmap_rows):
+    if not heatmap_rows:
+        return None
+    best = max(heatmap_rows, key=lambda r: r["minutes"])
+    return best
+
+
+def _monthly_trend(cur, year_str):
+    cur.execute('''
+        SELECT CAST(substr(ts,6,2) AS INTEGER) AS month,
+               SUM(ms_played)/60000 AS minutes, COUNT(*) AS plays
+        FROM plays WHERE ts IS NOT NULL AND substr(ts,1,4)=?
+        GROUP BY month ORDER BY month
+    ''', (year_str,))
+    return [{"month": m, "minutes": int(min_), "plays": p} for m, min_, p in cur.fetchall()]
+
+
+def _weekday_data(cur, year_str):
+    cur.execute('''
+        SELECT CAST(strftime('%w', ts) AS INTEGER) AS dow,
+               SUM(ms_played)/60000 AS minutes, COUNT(*) AS plays
+        FROM plays WHERE ts IS NOT NULL AND substr(ts,1,4)=?
+        GROUP BY dow
+    ''', (year_str,))
+    labels = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"]
+    result = {d: {"minutes": 0, "plays": 0} for d in labels}
+    for dow, m, p in cur.fetchall():
+        result[labels[dow]] = {"minutes": int(m), "plays": p}
+    return result
+
+
+def _hourly_minutes(cur, year_str):
+    cur.execute('''
+        SELECT CAST(strftime('%H', ts) AS INTEGER) AS hour,
+               SUM(ms_played)/60000 AS minutes
+        FROM plays WHERE ts IS NOT NULL AND substr(ts,1,4)=?
+        GROUP BY hour
+    ''', (year_str,))
+    result = [0] * 24
+    for h, m in cur.fetchall():
+        result[h] = int(m)
+    return result
+
+
+def _skip_stats(cur, year_str):
+    cur.execute('''
+        SELECT COUNT(*), COALESCE(SUM(skipped),0)
+        FROM plays WHERE substr(ts,1,4)=?
+    ''', (year_str,))
+    total, n_skipped = cur.fetchone()
+    skip_rate = round(n_skipped / total * 100, 1) if total > 0 else 0.0
+    cur.execute('''
+        SELECT track_name, artist_name, COUNT(*) AS n
+        FROM plays WHERE skipped=1 AND substr(ts,1,4)=? AND track_name IS NOT NULL
+        GROUP BY track_name, artist_name ORDER BY n DESC LIMIT 5
+    ''', (year_str,))
+    most_skipped = [{"track": t, "artist": a, "skips": n} for t, a, n in cur.fetchall()]
+    return {"skip_rate": skip_rate, "most_skipped_tracks": most_skipped}
+
+
+def _top_albums(cur, year_str):
+    cur.execute('''
+        SELECT album_name, artist_name, SUM(ms_played)/60000 AS minutes, COUNT(*) AS plays
+        FROM plays WHERE album_name IS NOT NULL AND substr(ts,1,4)=?
+        GROUP BY album_name, artist_name ORDER BY minutes DESC LIMIT 5
+    ''', (year_str,))
+    return [{"album": a, "artist": ar, "minutes": int(m), "plays": p}
+            for a, ar, m, p in cur.fetchall()]
+
+
+def _diversity(cur, year_str):
+    cur.execute('''
+        SELECT COUNT(DISTINCT artist_name), COUNT(DISTINCT track_name), COUNT(DISTINCT album_name)
+        FROM plays WHERE substr(ts,1,4)=? AND track_name IS NOT NULL
+    ''', (year_str,))
+    artists, tracks, albums = cur.fetchone()
+    return {"unique_artists": artists or 0, "unique_tracks": tracks or 0, "unique_albums": albums or 0}
+
+
+def _platform_stats(cur, year_str):
+    cur.execute('''
+        SELECT platform, COUNT(*) AS plays
+        FROM plays WHERE platform IS NOT NULL AND platform!='' AND substr(ts,1,4)=?
+        GROUP BY platform ORDER BY plays DESC LIMIT 6
+    ''', (year_str,))
+    rows = cur.fetchall()
+    total = sum(r[1] for r in rows)
+    return [{"platform": p, "plays": c,
+             "pct": round(c / total * 100, 1) if total > 0 else 0}
+            for p, c in rows]
+
+
+def _milestones(cur, year_str):
+    cur.execute('''
+        SELECT ts, track_name, artist_name FROM plays
+        WHERE substr(ts,1,4)=? AND track_name IS NOT NULL ORDER BY ts ASC LIMIT 1
+    ''', (year_str,))
+    first = cur.fetchone()
+    cur.execute('''
+        SELECT ts, track_name, artist_name FROM plays
+        WHERE substr(ts,1,4)=? AND track_name IS NOT NULL ORDER BY ts DESC LIMIT 1
+    ''', (year_str,))
+    last = cur.fetchone()
+    cur.execute('''
+        SELECT DATE(ts) AS day, track_name, artist_name, COUNT(*) AS cnt
+        FROM plays WHERE substr(ts,1,4)=? AND track_name IS NOT NULL
+        GROUP BY day, track_name, artist_name ORDER BY cnt DESC LIMIT 1
+    ''', (year_str,))
+    top_repeat = cur.fetchone()
+    return {
+        "first_track": {"ts": first[0], "track": first[1], "artist": first[2]} if first else None,
+        "last_track":  {"ts": last[0],  "track": last[1],  "artist": last[2]}  if last  else None,
+        "top_daily_repeat": {"date": top_repeat[0], "track": top_repeat[1],
+                             "artist": top_repeat[2], "count": top_repeat[3]}
+                             if top_repeat else None,
+    }
+
 
 def get_wrapped(conn, year=None):
     """
@@ -94,19 +238,41 @@ def get_wrapped(conn, year=None):
                 break
     bucket_pct = {label: (bucket_minutes[label] / total_minutes * 100) if total_minutes > 0 else 0 for label in bucket_labels}
     primary_label = max(bucket_labels, key=lambda l: bucket_pct[l]) if total_minutes > 0 else None
-    # Compose output
+    # Extended stats
+    year_str = str(target_year)
+    heatmap_rows    = _heatmap(cur, year_str)
+    streak_info     = _streaks(heatmap_rows, target_year)
+    most_active     = _most_active_day(heatmap_rows)
+    monthly         = _monthly_trend(cur, year_str)
+    weekdays        = _weekday_data(cur, year_str)
+    hourly          = _hourly_minutes(cur, year_str)
+    skip_data       = _skip_stats(cur, year_str)
+    albums          = _top_albums(cur, year_str)
+    div_stats       = _diversity(cur, year_str)
+    platforms       = _platform_stats(cur, year_str)
+    milestones      = _milestones(cur, year_str)
+
     return {
         "year": target_year,
+        "available_years": sorted_years,
         "total_minutes": stats["minutes"],
         "total_plays": stats["plays"],
         "top_artists": [{"artist": a, "minutes": int(m)} for a, m in top_artists],
         "top_tracks": [{"track": t, "artist": a, "minutes": int(m)} for t, a, m in top_tracks],
+        "top_albums": albums,
         "peak_month": peak_month[0] if peak_month else None,
         "peak_hour": peak_hour[0] if peak_hour else None,
-        "profile": {
-            "bucket_pct": bucket_pct,
-            "primary": primary_label
-        }
+        "hourly_minutes": hourly,
+        "profile": {"bucket_pct": bucket_pct, "primary": primary_label},
+        "monthly_trend": monthly,
+        "heatmap": heatmap_rows,
+        "weekdays": weekdays,
+        "streaks": streak_info,
+        "most_active_day": most_active,
+        "skip_stats": skip_data,
+        "diversity": div_stats,
+        "platforms": platforms,
+        "milestones": milestones,
     }
 def get_yearly_trend(conn):
     """

@@ -1,0 +1,777 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Wrapped - Spoolify</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --primary: #8b5cf6;
+      --pl: #a78bfa;
+      --sec: #ec4899;
+      --acc: #f59e0b;
+      --teal: #0891b2;
+      --bg: #0f0f1a;
+      --panel: rgba(255,255,255,0.06);
+      --panel-h: rgba(255,255,255,0.10);
+      --border: rgba(255,255,255,0.12);
+      --text: #f9fafb;
+      --muted: #9ca3af;
+      --r: 16px;
+      --rs: 8px;
+    }
+    * { box-sizing: border-box; }
+    body { margin:0; padding:0; font-family:"Space Grotesk",sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+
+    .blob { position:fixed; pointer-events:none; z-index:0; border-radius:50%; filter:blur(80px); opacity:.35; }
+    .blob-a { width:500px; height:500px; top:-150px; right:-150px; background:#7c3aed; }
+    .blob-b { width:400px; height:400px; bottom:-100px; left:-100px; background:#be185d; }
+    .blob-c { width:300px; height:300px; top:40%; left:40%; background:#0891b2; }
+
+    .page { position:relative; z-index:1; max-width:900px; margin:0 auto; padding:2rem 1.5rem 5rem; }
+
+    /* ── Nav ── */
+    .top-nav { display:flex; justify-content:space-between; align-items:center; margin-bottom:3rem; gap:1rem; flex-wrap:wrap; }
+    .back-link { display:inline-flex; align-items:center; gap:.4rem; color:var(--muted); text-decoration:none; font-size:.9rem; font-weight:500; transition:color .2s; }
+    .back-link:hover { color:var(--text); }
+
+    /* ── Custom dropdown ── */
+    .yr-dd { position:relative; }
+    .yr-btn { display:inline-flex; align-items:center; gap:.5rem; background:var(--panel); color:var(--text); border:1px solid var(--border); border-radius:var(--rs); padding:.45rem .9rem; font-family:"Space Grotesk",sans-serif; font-size:.9rem; font-weight:600; cursor:pointer; transition:background .15s,border-color .15s; }
+    .yr-btn:hover, .yr-btn[aria-expanded="true"] { background:var(--panel-h); border-color:var(--pl); }
+    .yr-btn svg { transition:transform .2s; color:var(--muted); flex-shrink:0; }
+    .yr-btn[aria-expanded="true"] svg { transform:rotate(180deg); }
+    .yr-panel { display:none; position:absolute; top:calc(100% + 6px); right:0; z-index:300; background:#1c1535; border:1px solid var(--border); border-radius:var(--rs); box-shadow:0 8px 32px rgba(0,0,0,.5); min-width:110px; max-height:260px; overflow-y:auto; scrollbar-width:thin; scrollbar-color:rgba(255,255,255,.15) transparent; }
+    .yr-panel.open { display:block; animation:dropIn .15s ease-out; }
+    @keyframes dropIn { from{opacity:0;transform:translateY(-6px)} to{opacity:1;transform:translateY(0)} }
+    .yr-opt { display:block; width:100%; padding:.55rem 1rem; background:none; border:none; color:var(--text); font-family:"Space Grotesk",sans-serif; font-size:.9rem; font-weight:500; text-align:left; cursor:pointer; transition:background .1s; }
+    .yr-opt:hover { background:var(--panel-h); }
+    .yr-opt.sel { color:var(--pl); background:rgba(167,139,250,.1); }
+
+    /* ── Hero ── */
+    .hero { text-align:center; margin-bottom:3rem; animation:fadeUp .6s ease-out both; }
+    .hero-eye { font-size:.85rem; font-weight:500; letter-spacing:.12em; text-transform:uppercase; color:var(--pl); margin:0 0 .75rem; }
+    .hero-year { font-size:clamp(4rem,15vw,9rem); font-weight:700; line-height:1; margin:0 0 .75rem;
+      background:linear-gradient(135deg,var(--pl) 0%,var(--sec) 60%,var(--acc) 100%);
+      -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+    .hero-tag { font-size:1.1rem; color:var(--muted); margin:0; }
+
+    /* ── Section headings ── */
+    .sec-head { font-size:.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.1em; color:var(--muted); margin:0 0 1.1rem; }
+
+    /* ── Cards ── */
+    .card { background:var(--panel); border:1px solid var(--border); border-radius:var(--r); padding:1.4rem 1.4rem 1.2rem; }
+    .card-h:hover { background:var(--panel-h); transform:translateY(-2px); transition:background .2s,transform .2s; }
+
+    /* ── Grid helpers ── */
+    .g4 { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:1rem; margin-bottom:2rem; animation:fadeUp .6s .1s ease-out both; }
+    .g2 { display:grid; grid-template-columns:repeat(auto-fit,minmax(290px,1fr)); gap:1.5rem; margin-bottom:2rem; }
+
+    /* ── Stat cards ── */
+    .stat-val { font-size:2rem; font-weight:700; line-height:1.1; margin-bottom:.3rem; }
+    .stat-lbl { font-size:.77rem; color:var(--muted); font-weight:500; text-transform:uppercase; letter-spacing:.06em; }
+    .gp  { background:linear-gradient(135deg,var(--pl),#c4b5fd);   -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+    .gpi { background:linear-gradient(135deg,var(--sec),#f9a8d4);  -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+    .ga  { background:linear-gradient(135deg,var(--acc),#fcd34d);  -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+    .gt  { background:linear-gradient(135deg,var(--teal),#67e8f9); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+    .gg  { background:linear-gradient(135deg,#10b981,#6ee7b7);     -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+
+    /* ── Ranked list ── */
+    .ranked-list { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:.95rem; }
+    .ranked-item { display:flex; align-items:flex-start; gap:.9rem; }
+    .rank-n { font-family:"IBM Plex Mono",monospace; font-size:.78rem; color:var(--muted); width:1.3rem; flex-shrink:0; text-align:right; padding-top:.15rem; }
+    .rank-n.r1 { color:var(--acc); font-weight:700; }
+    .rank-n.r2 { color:#e5e7eb; }
+    .rank-n.r3 { color:#cd7f32; }
+    .rank-info { flex:1; min-width:0; }
+    .rank-name { font-weight:600; font-size:.93rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .rank-sub  { font-size:.78rem; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:.1rem; }
+    .rank-bar-wrap { height:3px; background:rgba(255,255,255,.08); border-radius:2px; margin-top:.5rem; }
+    .rank-bar { height:100%; border-radius:2px; background:linear-gradient(90deg,var(--primary),var(--sec)); }
+    .list-empty { font-size:.85rem; color:var(--muted); padding:.5rem 0; margin:0; }
+
+    /* ── Profile bars ── */
+    .prof-prim { font-size:1.9rem; font-weight:700; text-transform:capitalize; background:linear-gradient(135deg,var(--pl),var(--sec)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; margin-bottom:1.1rem; }
+    .prof-bars { display:flex; flex-direction:column; gap:.65rem; }
+    .pb-row { display:flex; align-items:center; gap:.7rem; }
+    .pb-lbl { font-size:.78rem; color:var(--muted); width:4.5rem; flex-shrink:0; text-transform:capitalize; }
+    .pb-track { flex:1; height:6px; background:rgba(255,255,255,.08); border-radius:3px; overflow:hidden; }
+    .pb-fill { height:100%; border-radius:3px; transition:width .8s cubic-bezier(.4,0,.2,1); }
+    .bn { background:linear-gradient(90deg,#6d28d9,#a78bfa); }
+    .bm { background:linear-gradient(90deg,#b45309,#fcd34d); }
+    .ba { background:linear-gradient(90deg,#0369a1,#7dd3fc); }
+    .be { background:linear-gradient(90deg,#be185d,#f9a8d4); }
+    .pb-pct { font-family:"IBM Plex Mono",monospace; font-size:.76rem; color:var(--muted); width:2.8rem; text-align:right; flex-shrink:0; }
+
+    /* ── Calendar heatmap ── */
+    .heatmap-wrap { overflow-x:auto; padding-bottom:.5rem; }
+    .heatmap-grid { display:inline-grid; grid-template-rows:repeat(7,13px); grid-auto-flow:column; grid-auto-columns:13px; gap:2px; }
+    .hm-cell { width:13px; height:13px; border-radius:3px; cursor:default; transition:opacity .15s; }
+    .hm-cell:hover { opacity:.75; }
+    .hm0 { background:rgba(255,255,255,.06); }
+    .hm1 { background:#3b1f6b; }
+    .hm2 { background:#6d28d9; }
+    .hm3 { background:#8b5cf6; }
+    .hm4 { background:#a78bfa; }
+    .hm-empty { background:transparent; }
+    .hm-months { display:inline-flex; margin-bottom:4px; font-size:.65rem; color:var(--muted); font-family:"IBM Plex Mono",monospace; }
+    .hm-dow { display:grid; grid-template-rows:repeat(7,13px); gap:2px; margin-right:6px; flex-shrink:0; }
+    .hm-dow span { font-size:.6rem; color:var(--muted); font-family:"IBM Plex Mono",monospace; line-height:13px; text-align:right; }
+    .hm-outer { display:flex; align-items:flex-start; }
+
+    /* Tooltip */
+    #hm-tip { position:fixed; z-index:400; pointer-events:none; background:#1c1535; border:1px solid var(--border); border-radius:var(--rs); padding:.5rem .75rem; font-size:.78rem; color:var(--text); box-shadow:0 4px 16px rgba(0,0,0,.5); white-space:nowrap; display:none; }
+    #hm-tip b { color:var(--pl); }
+
+    /* ── Bar charts ── */
+    .bar-chart { display:flex; align-items:flex-end; gap:4px; height:80px; }
+    .bar-col { flex:1; display:flex; flex-direction:column; align-items:center; gap:3px; }
+    .bar-fill { width:100%; border-radius:3px 3px 0 0; background:linear-gradient(180deg,var(--pl),var(--primary)); transition:height .6s cubic-bezier(.4,0,.2,1); min-height:2px; }
+    .bar-fill.peak { background:linear-gradient(180deg,var(--sec),#be185d); }
+    .bar-lbl { font-size:.6rem; color:var(--muted); font-family:"IBM Plex Mono",monospace; white-space:nowrap; }
+
+    /* 24h heatmap */
+    .hr-grid { display:grid; grid-template-columns:repeat(24,1fr); gap:3px; }
+    .hr-cell { height:28px; border-radius:3px; }
+
+    /* ── Platform pie-ish ── */
+    .platform-list { display:flex; flex-direction:column; gap:.6rem; }
+    .plat-row { display:flex; align-items:center; gap:.7rem; }
+    .plat-name { font-size:.82rem; color:var(--text); flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .plat-bar-track { width:120px; flex-shrink:0; height:6px; background:rgba(255,255,255,.08); border-radius:3px; overflow:hidden; }
+    .plat-bar-fill { height:100%; border-radius:3px; background:linear-gradient(90deg,var(--teal),#67e8f9); }
+    .plat-pct { font-family:"IBM Plex Mono",monospace; font-size:.76rem; color:var(--muted); width:3rem; text-align:right; flex-shrink:0; }
+
+    /* ── Milestone cards ── */
+    .milestone-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:1rem; }
+    .ms-card { background:var(--panel); border:1px solid var(--border); border-radius:var(--rs); padding:1rem 1.1rem; }
+    .ms-label { font-size:.7rem; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); margin:0 0 .5rem; }
+    .ms-track { font-weight:600; font-size:.9rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .ms-artist { font-size:.78rem; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:.15rem; }
+    .ms-date { font-family:"IBM Plex Mono",monospace; font-size:.7rem; color:var(--pl); margin-top:.35rem; }
+
+    /* ── Stat info tooltip ── */
+    .stat-lbl { position:relative; }
+    .si {
+      display:inline-flex; align-items:center; justify-content:center;
+      width:13px; height:13px; border-radius:50%;
+      border:1px solid rgba(255,255,255,0.22);
+      font-size:8px; font-weight:700; font-style:normal;
+      color:var(--muted); cursor:help; vertical-align:middle;
+      margin-left:4px; line-height:1; flex-shrink:0;
+      transition:border-color .15s, color .15s;
+    }
+    .si:hover, .si:focus { border-color:var(--pl); color:var(--pl); outline:none; }
+    .si::after {
+      content:attr(data-tip);
+      position:absolute; bottom:calc(100% + 8px); left:50%;
+      transform:translateX(-50%);
+      background:#1c1535; border:1px solid var(--border);
+      border-radius:var(--rs); padding:.5rem .65rem;
+      font-size:.72rem; font-weight:400; color:var(--text);
+      white-space:normal; width:190px; line-height:1.45;
+      box-shadow:0 6px 20px rgba(0,0,0,.55);
+      pointer-events:none; opacity:0;
+      transition:opacity .15s; z-index:500; text-align:left;
+      text-transform:none; letter-spacing:0;
+    }
+    .si:hover::after, .si:focus::after { opacity:1; }
+
+    /* ── Low-data notice ── */
+    .notice { display:flex; align-items:flex-start; gap:.6rem; background:rgba(245,158,11,.1); border:1px solid rgba(245,158,11,.25); border-radius:var(--rs); padding:.75rem 1rem; margin-bottom:1.5rem; font-size:.85rem; color:#fcd34d; }
+
+    /* ── States ── */
+    .state-msg { text-align:center; padding:4rem 1rem; color:var(--muted); }
+    .err-msg { text-align:center; padding:3rem 1rem; color:#f87171; font-size:.95rem; }
+
+    /* ── Animations ── */
+    @keyframes fadeUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+    .a0 { animation:fadeUp .6s ease-out both; }
+    .a1 { animation:fadeUp .6s .1s ease-out both; }
+    .a2 { animation:fadeUp .6s .2s ease-out both; }
+    .a3 { animation:fadeUp .6s .3s ease-out both; }
+    .a4 { animation:fadeUp .6s .4s ease-out both; }
+    .a5 { animation:fadeUp .6s .5s ease-out both; }
+
+    /* ── Footer ── */
+    .foot { text-align:center; margin-top:3rem; padding-top:2rem; border-top:1px solid var(--border); color:var(--muted); font-size:.85rem; }
+    .foot a { color:var(--pl); text-decoration:none; }
+    .foot a:hover { text-decoration:underline; }
+
+    @media(max-width:540px){
+      .hero-year{font-size:5rem;}
+      .g4{grid-template-columns:1fr 1fr;}
+    }
+  </style>
+</head>
+<body>
+<div class="blob blob-a" aria-hidden="true"></div>
+<div class="blob blob-b" aria-hidden="true"></div>
+<div class="blob blob-c" aria-hidden="true"></div>
+<div id="hm-tip" role="tooltip"></div>
+
+<div class="page">
+  <nav class="top-nav">
+    <a href="/dashboard" class="back-link">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <path d="M10 3L5 8L10 13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      Back to Dashboard
+    </a>
+    <div class="yr-dd" id="yr-dd">
+      <button class="yr-btn" id="yr-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Select year">
+        <span id="yr-lbl">—</span>
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+          <path d="M3 5L7 9L11 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+      <div class="yr-panel" id="yr-panel" role="listbox" aria-label="Available years"></div>
+    </div>
+  </nav>
+
+  <div id="loading-state" class="state-msg">Loading your wrapped...</div>
+  <div id="error-state" class="err-msg" style="display:none"></div>
+
+  <div id="content" style="display:none">
+
+    <div id="low-data" class="notice" style="display:none">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="flex-shrink:0;margin-top:1px" aria-hidden="true">
+        <path d="M8 2L14 13H2L8 2Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>
+        <path d="M8 7V9.5M8 11.5V11.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+      </svg>
+      <span id="low-data-text"></span>
+    </div>
+
+    <!-- Hero -->
+    <div class="hero a0">
+      <p class="hero-eye">Your Year in Music</p>
+      <h1 class="hero-year" id="hero-year">—</h1>
+      <p class="hero-tag" id="hero-tag">—</p>
+    </div>
+
+    <!-- Key stats -->
+    <div class="g4 a1">
+      <div class="card card-h" style="text-align:center">
+        <div class="stat-val gp" id="s-hours">—</div>
+        <div class="stat-lbl">Hours Listened <i class="si" tabindex="0" data-tip="Total minutes played divided by 60. Counts every logged play, including short and partial listens.">i</i></div>
+      </div>
+      <div class="card card-h" style="text-align:center">
+        <div class="stat-val gpi" id="s-plays">—</div>
+        <div class="stat-lbl">Total Plays <i class="si" tabindex="0" data-tip="Every track start recorded in your Spotify export, including skipped and very short plays.">i</i></div>
+      </div>
+      <div class="card card-h" style="text-align:center">
+        <div class="stat-val ga" id="s-month">—</div>
+        <div class="stat-lbl">Peak Month <i class="si" tabindex="0" data-tip="The calendar month with the most total listening time this year.">i</i></div>
+      </div>
+      <div class="card card-h" style="text-align:center">
+        <div class="stat-val gt" id="s-hour">—</div>
+        <div class="stat-lbl">Peak Hour (UTC) <i class="si" tabindex="0" data-tip="The UTC hour of day with the most listening time. Spotify's export stores all timestamps in UTC, and shifting by browser timezone would be wrong for anyone who observes DST — the offset changes mid-year.">i</i></div>
+      </div>
+      <div class="card card-h" style="text-align:center">
+        <div class="stat-val gg" id="s-streak">—</div>
+        <div class="stat-lbl">Longest Streak <i class="si" tabindex="0" data-tip="Most consecutive calendar days with at least one play recorded.">i</i></div>
+      </div>
+      <div class="card card-h" style="text-align:center">
+        <div class="stat-val" style="font-size:1.6rem;color:var(--pl)" id="s-active">—</div>
+        <div class="stat-lbl">Active Days <i class="si" tabindex="0" data-tip="Number of days in the year where at least one track was played, out of 365 (or 366 for a leap year).">i</i></div>
+      </div>
+      <div class="card card-h" style="text-align:center">
+        <div class="stat-val" style="font-size:1.6rem;color:var(--sec)" id="s-skip">—</div>
+        <div class="stat-lbl">Skip Rate <i class="si" tabindex="0" data-tip="Percentage of plays that Spotify marked as skipped before the track finished. Inflated by shuffle and autoplay — Spotify logs these as skipped even when you didn't act.">i</i></div>
+      </div>
+      <div class="card card-h" style="text-align:center">
+        <div class="stat-val" style="font-size:1.6rem;color:var(--acc)" id="s-uartists">—</div>
+        <div class="stat-lbl">Unique Artists <i class="si" tabindex="0" data-tip="Count of distinct artist names played at least once this year, as recorded in your export.">i</i></div>
+      </div>
+    </div>
+
+    <!-- Calendar heatmap -->
+    <div class="card a2" style="margin-bottom:2rem">
+      <p class="sec-head">Listening Calendar</p>
+      <div class="heatmap-wrap">
+        <div id="hm-months" class="hm-months"></div>
+        <div class="hm-outer">
+          <div class="hm-dow" id="hm-dow">
+            <span></span><span>Mon</span><span></span><span>Wed</span><span></span><span>Fri</span><span></span>
+          </div>
+          <div class="heatmap-grid" id="hm-grid"></div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:.5rem;margin-top:.75rem;font-size:.68rem;color:var(--muted)">
+        Less
+        <span style="width:11px;height:11px;border-radius:2px;background:rgba(255,255,255,.06);display:inline-block"></span>
+        <span style="width:11px;height:11px;border-radius:2px;background:#3b1f6b;display:inline-block"></span>
+        <span style="width:11px;height:11px;border-radius:2px;background:#6d28d9;display:inline-block"></span>
+        <span style="width:11px;height:11px;border-radius:2px;background:#8b5cf6;display:inline-block"></span>
+        <span style="width:11px;height:11px;border-radius:2px;background:#a78bfa;display:inline-block"></span>
+        More
+      </div>
+    </div>
+
+    <!-- Top artists + tracks -->
+    <div class="g2 a2">
+      <div class="card">
+        <p class="sec-head">Top Artists</p>
+        <ol class="ranked-list" id="artists-list"></ol>
+      </div>
+      <div class="card">
+        <p class="sec-head">Top Tracks</p>
+        <ol class="ranked-list" id="tracks-list"></ol>
+      </div>
+    </div>
+
+    <!-- Top albums -->
+    <div class="card a3" style="margin-bottom:2rem">
+      <p class="sec-head">Top Albums</p>
+      <ol class="ranked-list" id="albums-list"></ol>
+    </div>
+
+    <!-- Monthly trend -->
+    <div class="card a3" style="margin-bottom:2rem">
+      <p class="sec-head">Month by Month</p>
+      <div id="monthly-chart"></div>
+    </div>
+
+    <!-- Weekday pattern + profile -->
+    <div class="g2 a3">
+      <div class="card">
+        <p class="sec-head">Day of Week</p>
+        <div id="weekday-chart" style="margin-bottom:.75rem"></div>
+        <div id="weekday-note" style="font-size:.82rem;color:var(--muted)"></div>
+      </div>
+      <div class="card">
+        <p class="sec-head">Listening Profile</p>
+        <div class="prof-prim" id="prof-primary">—</div>
+        <div class="prof-bars" id="prof-bars"></div>
+      </div>
+    </div>
+
+    <!-- 24-hour heatmap -->
+    <div class="card a4" style="margin-bottom:2rem">
+      <p class="sec-head">Hour of Day (UTC)</p>
+      <div class="hr-grid" id="hr-grid"></div>
+      <div style="display:flex;justify-content:space-between;margin-top:4px;font-family:'IBM Plex Mono',monospace;font-size:.62rem;color:var(--muted)">
+        <span>12 AM</span><span>6 AM</span><span>12 PM</span><span>6 PM</span><span>11 PM</span>
+      </div>
+    </div>
+
+    <!-- Diversity + skip + platform -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1.5rem;margin-bottom:2rem" class="a4">
+      <div class="card">
+        <p class="sec-head">Track Diversity</p>
+        <div id="diversity-content"></div>
+      </div>
+      <div class="card" id="skip-card">
+        <p class="sec-head">Skip Stats</p>
+        <div id="skip-content"></div>
+      </div>
+      <div class="card" id="platform-card">
+        <p class="sec-head">Platforms</p>
+        <div class="platform-list" id="platform-list"></div>
+      </div>
+    </div>
+
+    <!-- Milestones -->
+    <div class="card a5" style="margin-bottom:2rem">
+      <p class="sec-head">Milestones</p>
+      <div class="milestone-grid" id="milestone-grid"></div>
+    </div>
+
+    <!-- Most skipped tracks -->
+    <div class="card a5" style="margin-bottom:2rem" id="skipped-card">
+      <p class="sec-head">Most Skipped Tracks</p>
+      <ol class="ranked-list" id="skipped-list"></ol>
+    </div>
+
+  </div><!-- /content -->
+
+  <footer class="foot">
+    <p>Generated from your local Spoolify archive — <a href="/dashboard">back to dashboard</a></p>
+  </footer>
+</div>
+
+<script>
+const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const MONTHS_FULL = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+const DAYS = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+const PROF_ORDER = ["afternoon","evening","morning","night"];
+const BAR_CLS = {night:"bn",morning:"bm",afternoon:"ba",evening:"be"};
+
+// ── Dropdown ──────────────────────────────────────────────────────────────────
+const yrBtn   = document.getElementById("yr-btn");
+const yrPanel = document.getElementById("yr-panel");
+const yrLbl   = document.getElementById("yr-lbl");
+
+yrBtn.addEventListener("click", e => {
+  e.stopPropagation();
+  yrPanel.classList.contains("open") ? closeDD() : openDD();
+});
+document.addEventListener("click", closeDD);
+document.addEventListener("keydown", e => { if(e.key==="Escape") closeDD(); });
+function openDD()  { yrPanel.classList.add("open");  yrBtn.setAttribute("aria-expanded","true");  }
+function closeDD() { yrPanel.classList.remove("open"); yrBtn.setAttribute("aria-expanded","false"); }
+
+function populateDD(years, sel) {
+  yrLbl.textContent = sel;
+  yrPanel.innerHTML = "";
+  years.slice().reverse().forEach(y => {
+    const btn = document.createElement("button");
+    btn.className = "yr-opt" + (y===sel?" sel":"");
+    btn.setAttribute("role","option");
+    btn.setAttribute("aria-selected", y===sel?"true":"false");
+    btn.textContent = y;
+    btn.addEventListener("click", e => { e.stopPropagation(); closeDD(); if(y!==sel) loadWrapped(y); });
+    yrPanel.appendChild(btn);
+  });
+}
+
+// ── Formatters ────────────────────────────────────────────────────────────────
+function fmtHour(h) {
+  if(h===null||h===undefined) return "—";
+  const p=h<12?"AM":"PM", d=h%12===0?12:h%12;
+  return `${d} ${p}`;
+}
+function fmtMonth(m) {
+  if(!m) return "—";
+  return MONTHS[parseInt(m,10)-1]||m;
+}
+function fmtDate(ts) {
+  if(!ts) return "—";
+  return ts.slice(0,10);
+}
+
+// Shift UTC hourly array by browser timezone offset → local peak
+function utcPeakHour(hourlyMinutes) {
+  if (!hourlyMinutes || !hourlyMinutes.length) return null;
+  const maxVal = Math.max(...hourlyMinutes);
+  return maxVal === 0 ? null : hourlyMinutes.indexOf(maxVal);
+}
+
+// ── Ranked list ───────────────────────────────────────────────────────────────
+function renderRanked(el, items, rowFn) {
+  el.innerHTML = "";
+  if(!items||!items.length) {
+    const p=document.createElement("p"); p.className="list-empty"; p.textContent="No data for this year."; el.appendChild(p); return;
+  }
+  const maxM = items[0].minutes || 1;
+  items.forEach((item,i)=>{
+    const li=document.createElement("li"); li.className="ranked-item";
+    const rCls=i===0?"r1":i===1?"r2":i===2?"r3":"";
+    const pct=maxM>0?Math.round(item.minutes/maxM*100):0;
+    li.innerHTML=`<span class="rank-n ${rCls}">${i+1}</span>
+      <div class="rank-info">${rowFn(item)}<div class="rank-bar-wrap"><div class="rank-bar" style="width:${pct}%"></div></div></div>`;
+    el.appendChild(li);
+  });
+}
+
+// ── Profile ───────────────────────────────────────────────────────────────────
+function renderProfile(data) {
+  const p=data.profile?.primary;
+  document.getElementById("prof-primary").textContent = p ? p.charAt(0).toUpperCase()+p.slice(1)+" listener" : "—";
+  const el=document.getElementById("prof-bars"); el.innerHTML="";
+  const pct=data.profile?.bucket_pct||{};
+  PROF_ORDER.slice().sort((a,b)=>(pct[b]||0)-(pct[a]||0)).forEach(lbl=>{
+    const v=pct[lbl]||0;
+    el.insertAdjacentHTML("beforeend",`<div class="pb-row">
+      <span class="pb-lbl">${lbl}</span>
+      <div class="pb-track"><div class="pb-fill ${BAR_CLS[lbl]}" style="width:${v.toFixed(1)}%"></div></div>
+      <span class="pb-pct">${v.toFixed(0)}%</span></div>`);
+  });
+}
+
+// ── Heatmap ───────────────────────────────────────────────────────────────────
+function renderHeatmap(heatmapRows, year) {
+  const lookup={};
+  heatmapRows.forEach(r=>{ lookup[r.date]=r; });
+  const maxMin=Math.max(...heatmapRows.map(r=>r.minutes),1);
+
+  function level(m, plays) {
+    if(!m && !plays) return 0;
+    if(!m) return 1; // has plays but <1 min
+    const p=m/maxMin;
+    if(p<.2) return 1; if(p<.45) return 2; if(p<.75) return 3; return 4;
+  }
+
+  const start=new Date(year,0,1);
+  const startDow=start.getDay(); // 0=Sun
+  const cells=[];
+  // padding before Jan 1
+  for(let i=0;i<startDow;i++) cells.push({empty:true});
+  const end=new Date(year,11,31);
+  for(let d=new Date(start);d<=end;d.setDate(d.getDate()+1)) {
+    const ds=d.toISOString().slice(0,10);
+    cells.push({date:ds, data:lookup[ds]||null});
+  }
+  // pad to full columns
+  while(cells.length%7!==0) cells.push({empty:true});
+
+  // month labels
+  const weeks=cells.length/7;
+  const monthEl=document.getElementById("hm-months");
+  monthEl.innerHTML="";
+  // add space for dow labels
+  monthEl.style.paddingLeft="33px";
+  let lastMonth=-1, colW=15; // 13px cell + 2px gap
+  const spans=new Array(weeks).fill(-1);
+  cells.forEach((c,idx)=>{
+    if(c.empty||!c.date) return;
+    const m=parseInt(c.date.slice(5,7),10)-1;
+    const col=Math.floor(idx/7);
+    if(m!==lastMonth){ spans[col]=m; lastMonth=m; }
+  });
+  const row=document.createElement("div");
+  row.style.cssText="display:flex;width:100%";
+  for(let w=0;w<weeks;w++){
+    const sp=document.createElement("span");
+    sp.style.cssText=`display:inline-block;width:${colW}px;flex-shrink:0;overflow:visible;`;
+    sp.textContent=spans[w]>=0?MONTHS[spans[w]]:"";
+    row.appendChild(sp);
+  }
+  monthEl.appendChild(row);
+
+  // grid cells
+  const grid=document.getElementById("hm-grid");
+  grid.innerHTML="";
+  const tip=document.getElementById("hm-tip");
+
+  cells.forEach(c=>{
+    const div=document.createElement("div");
+    if(c.empty) { div.className="hm-cell hm-empty"; }
+    else {
+      const lv=level(c.data?.minutes||0, c.data?.plays||0);
+      div.className=`hm-cell hm${lv}`;
+      div.dataset.date=c.date;
+      if(c.data) {
+        div.dataset.min=c.data.minutes;
+        div.dataset.plays=c.data.plays;
+      }
+      div.addEventListener("mouseenter", e=>{
+        const d=c.date;
+        const hrs=c.data?Math.round(c.data.minutes/60):0;
+        const plays=c.data?.plays||0;
+        const min=c.data?.minutes||0;
+        tip.innerHTML=`<b>${d}</b> &nbsp;${hrs}h ${min%60}m &nbsp;·&nbsp; ${plays.toLocaleString()} plays`;
+        tip.style.display="block";
+      });
+      div.addEventListener("mousemove", e=>{
+        tip.style.left=(e.clientX+14)+"px";
+        tip.style.top=(e.clientY-10)+"px";
+      });
+      div.addEventListener("mouseleave", ()=>{ tip.style.display="none"; });
+    }
+    grid.appendChild(div);
+  });
+}
+
+// ── Monthly trend bar chart ───────────────────────────────────────────────────
+function renderMonthly(rows, peakMonthNum) {
+  const el=document.getElementById("monthly-chart");
+  if(!rows||!rows.length){ el.innerHTML='<p class="list-empty">No monthly data.</p>'; return; }
+  const maxM=Math.max(...rows.map(r=>r.minutes),1);
+  const peakM=parseInt(peakMonthNum,10)||0;
+  let html='<div class="bar-chart">';
+  rows.forEach(r=>{
+    const pct=Math.max(r.minutes/maxM*100,2);
+    const isPeak=r.month===peakM;
+    const hrs=Math.round(r.minutes/60);
+    html+=`<div class="bar-col" title="${MONTHS_FULL[r.month-1]}: ${hrs}h, ${r.plays.toLocaleString()} plays">
+      <div class="bar-fill${isPeak?" peak":""}" style="height:${pct}%"></div>
+      <div class="bar-lbl">${MONTHS[r.month-1]}</div></div>`;
+  });
+  html+="</div>";
+  el.innerHTML=html;
+}
+
+// ── Weekday bar chart ─────────────────────────────────────────────────────────
+function renderWeekday(wdMap) {
+  const el=document.getElementById("weekday-chart");
+  const note=document.getElementById("weekday-note");
+  const keys=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+  const vals=keys.map(k=>wdMap[k]?.minutes||0);
+  const maxV=Math.max(...vals,1);
+  const topIdx=vals.indexOf(Math.max(...vals));
+  let html='<div class="bar-chart">';
+  keys.forEach((k,i)=>{
+    const pct=Math.max(vals[i]/maxV*100,2);
+    const hrs=Math.round(vals[i]/60);
+    html+=`<div class="bar-col" title="${k}: ${hrs}h">
+      <div class="bar-fill${i===topIdx?" peak":""}" style="height:${pct}%"></div>
+      <div class="bar-lbl">${k}</div></div>`;
+  });
+  html+="</div>";
+  el.innerHTML=html;
+  note.textContent=`Your biggest listening day is ${keys[topIdx]}.`;
+}
+
+// ── 24h heatmap ───────────────────────────────────────────────────────────────
+function renderHourGrid(hourlyUtc) {
+  const maxV=Math.max(...hourlyUtc,1);
+  const el=document.getElementById("hr-grid"); el.innerHTML="";
+  hourlyUtc.forEach((m,h)=>{
+    const p=m/maxV;
+    const opacity=m===0?0.05:0.15+p*0.85;
+    const div=document.createElement("div");
+    div.className="hr-cell";
+    div.style.background=`rgba(139,92,246,${opacity.toFixed(2)})`;
+    div.title=`${fmtHour(h)} UTC: ${Math.round(m/60)}h`;
+    el.appendChild(div);
+  });
+}
+
+// ── Diversity ─────────────────────────────────────────────────────────────────
+function renderDiversity(div, totalPlays) {
+  const ua  = (div.unique_artists ?? 0);
+  const ut  = (div.unique_tracks  ?? 0);
+  const uab = (div.unique_albums  ?? 0);
+  const repeatScore = ut > 0 ? Math.round(totalPlays / ut * 10) / 10 : 0;
+  document.getElementById("diversity-content").innerHTML=`
+    <div style="display:flex;flex-direction:column;gap:.6rem">
+      <div style="display:flex;justify-content:space-between"><span style="color:var(--muted);font-size:.82rem">Unique artists</span><span style="font-weight:600">${ua.toLocaleString()}</span></div>
+      <div style="display:flex;justify-content:space-between"><span style="color:var(--muted);font-size:.82rem">Unique tracks</span><span style="font-weight:600">${ut.toLocaleString()}</span></div>
+      <div style="display:flex;justify-content:space-between"><span style="color:var(--muted);font-size:.82rem">Unique albums</span><span style="font-weight:600">${uab.toLocaleString()}</span></div>
+      <div style="display:flex;justify-content:space-between;padding-top:.4rem;border-top:1px solid var(--border)">
+        <span style="color:var(--muted);font-size:.82rem">Avg plays per track</span>
+        <span style="font-weight:600;color:var(--pl)">${repeatScore}×</span>
+      </div>
+    </div>`;
+}
+
+// ── Skip stats ────────────────────────────────────────────────────────────────
+function renderSkip(skip) {
+  document.getElementById("skip-content").innerHTML=`
+    <div style="margin-bottom:.75rem">
+      <div class="stat-val gpi" style="font-size:2rem">${skip.skip_rate}%</div>
+      <div class="stat-lbl">of plays logged as skipped</div>
+      <div style="font-size:.75rem;color:var(--muted);margin-top:.4rem;line-height:1.4">Includes shuffle and autoplay tracks Spotify marked as skipped before completion.</div>
+    </div>`;
+  renderRanked(document.getElementById("skipped-list"), skip.most_skipped_tracks,
+    item=>`<div class="rank-name">${item.track}</div><div class="rank-sub">${item.artist} · ${item.skips} skips</div>`);
+  if(!skip.most_skipped_tracks?.length) document.getElementById("skipped-card").style.display="none";
+}
+
+// ── Platforms ─────────────────────────────────────────────────────────────────
+function renderPlatforms(platforms) {
+  const el=document.getElementById("platform-list");
+  if(!platforms?.length){ document.getElementById("platform-card").style.display="none"; return; }
+  el.innerHTML="";
+  platforms.forEach(p=>{
+    el.insertAdjacentHTML("beforeend",`<div class="plat-row">
+      <span class="plat-name">${p.platform}</span>
+      <div class="plat-bar-track"><div class="plat-bar-fill" style="width:${p.pct}%"></div></div>
+      <span class="plat-pct">${p.pct}%</span></div>`);
+  });
+}
+
+// ── Milestones ────────────────────────────────────────────────────────────────
+function renderMilestones(ms, year) {
+  const el=document.getElementById("milestone-grid"); el.innerHTML="";
+  const add=(label,track,artist,detail)=>{
+    if(!track) return;
+    el.insertAdjacentHTML("beforeend",`<div class="ms-card">
+      <p class="ms-label">${label}</p>
+      <div class="ms-track">${track}</div>
+      <div class="ms-artist">${artist||""}</div>
+      <div class="ms-date">${detail||""}</div></div>`);
+  };
+  if(ms.first_track) add("First track of "+year, ms.first_track.track, ms.first_track.artist, fmtDate(ms.first_track.ts));
+  if(ms.last_track)  add("Last track of "+year,  ms.last_track.track,  ms.last_track.artist,  fmtDate(ms.last_track.ts));
+  if(ms.top_daily_repeat) add(
+    "Most repeated in a day",
+    ms.top_daily_repeat.track,
+    ms.top_daily_repeat.artist,
+    `${ms.top_daily_repeat.count}× on ${ms.top_daily_repeat.date}`
+  );
+  if(!el.children.length) el.insertAdjacentHTML("beforeend","<p class=\"list-empty\">No milestones found.</p>");
+}
+
+// ── Main render ───────────────────────────────────────────────────────────────
+function render(data) {
+  // Low-data notice
+  const noticeEl=document.getElementById("low-data");
+  if(data.total_plays<200){
+    document.getElementById("low-data-text").textContent=
+      `Only ${data.total_plays.toLocaleString()} plays in ${data.year} — may be a partial or early year.`;
+    noticeEl.style.display="flex";
+  } else { noticeEl.style.display="none"; }
+
+  // Hero
+  document.getElementById("hero-year").textContent=data.year;
+  const hrs=Math.round(data.total_minutes/60);
+  document.getElementById("hero-tag").textContent=
+    `${hrs.toLocaleString()} hours from ${data.total_plays.toLocaleString()} plays`;
+
+  // Key stats
+  document.getElementById("s-hours").textContent=hrs.toLocaleString();
+  document.getElementById("s-plays").textContent=data.total_plays.toLocaleString();
+  document.getElementById("s-month").textContent=fmtMonth(data.peak_month);
+  const utcPeak=utcPeakHour(data.hourly_minutes||[]);
+  document.getElementById("s-hour").textContent=fmtHour(utcPeak);
+  document.getElementById("s-streak").textContent=(data.streaks?.longest||0)+" days";
+  document.getElementById("s-active").textContent=(data.streaks?.active_days||0).toLocaleString()+" days";
+  document.getElementById("s-skip").textContent=(data.skip_stats?.skip_rate||0)+"%";
+  document.getElementById("s-uartists").textContent=(data.diversity?.unique_artists||0).toLocaleString();
+
+  // Lists
+  renderRanked(document.getElementById("artists-list"), data.top_artists,
+    i=>`<div class="rank-name">${i.artist}</div><div class="rank-sub">${Math.round(i.minutes/60).toLocaleString()} hrs</div>`);
+  renderRanked(document.getElementById("tracks-list"), data.top_tracks,
+    i=>`<div class="rank-name">${i.track}</div><div class="rank-sub">${i.artist}</div>`);
+  renderRanked(document.getElementById("albums-list"), data.top_albums,
+    i=>`<div class="rank-name">${i.album}</div><div class="rank-sub">${i.artist} · ${Math.round(i.minutes/60).toLocaleString()} hrs</div>`);
+
+  renderHeatmap(data.heatmap||[], data.year);
+  renderMonthly(data.monthly_trend||[], data.peak_month);
+  renderWeekday(data.weekdays||{});
+  renderProfile(data);
+  renderHourGrid(data.hourly_minutes||new Array(24).fill(0));
+  renderDiversity(data.diversity||{}, data.total_plays);
+  renderSkip(data.skip_stats||{skip_rate:0,most_skipped_tracks:[]});
+  renderPlatforms(data.platforms||[]);
+  renderMilestones(data.milestones||{}, data.year);
+
+  document.getElementById("loading-state").style.display="none";
+  document.getElementById("content").style.display="block";
+}
+
+// ── Load ──────────────────────────────────────────────────────────────────────
+async function loadWrapped(year) {
+  document.getElementById("loading-state").style.display="block";
+  document.getElementById("error-state").style.display="none";
+  document.getElementById("content").style.display="none";
+
+  const url=year?`/api/wrapped?year=${year}`:"/api/wrapped";
+  let data;
+  try {
+    const res=await fetch(url,{credentials:"include"});
+    if(res.status===401){ window.location.href="/login"; return; }
+    if(!res.ok){
+      const err=await res.json().catch(()=>({detail:"Unknown error"}));
+      throw new Error(err.detail||`HTTP ${res.status}`);
+    }
+    const json=await res.json();
+    data=json.data||json;
+    populateDD(data.available_years||[data.year], data.year);
+  } catch(e){
+    document.getElementById("loading-state").style.display="none";
+    document.getElementById("error-state").style.display="block";
+    document.getElementById("error-state").textContent=`Could not load data: ${e.message}`;
+    return;
+  }
+  try {
+    render(data);
+  } catch(e){
+    console.error("Wrapped render error:", e);
+    document.getElementById("loading-state").style.display="none";
+    document.getElementById("error-state").style.display="block";
+    document.getElementById("error-state").textContent=`Render error: ${e.message} — try reloading. If this persists, check the browser console.`;
+  }
+}
+
+const params=new URLSearchParams(location.search);
+loadWrapped(params.get("year")?parseInt(params.get("year"),10):null);
+</script>
+</body>
+</html>
