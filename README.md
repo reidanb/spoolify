@@ -183,20 +183,11 @@ Total play count  : 166,140
 
 ---
 
-## 🧪 Performance Testing
+## 🧪 Tests
 
-- Configure your import directory in `tests/tests.json`:
-   ```json
-   {
-      "import_dir": "C:/Users/nonadmin_reidan/Downloads/Spotify Extended Streaming History"
-   }
-   ```
-- Run the test script:
-   ```powershell
-   ./tests/perf_import.ps1
-   ```
-- Uses a temporary test database and cleans up after the run
-- Prints all import output and errors in the summary
+```sh
+python -m pytest tests/
+```
 
 ---
 
@@ -233,8 +224,8 @@ Spoolify/
 │   ├── dashboard.js
 │   └── styles.css
 ├── tests/
-│   ├── perf_import.ps1
-│   └── tests.json
+│   ├── test_analytics.py
+│   └── test_importer.py
 ├── docs/
 │   ├── API.md
 │   └── img/
