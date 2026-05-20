@@ -381,6 +381,18 @@ def get_peak_month_filtered(conn, start_month=None, end_month=None):
 
 
 # ==============================================================================
+# Shared analytics helpers
+# ==============================================================================
+
+def _is_partial_year(year_data: dict, sorted_years: list) -> bool:
+    """Returns True if the last year in sorted_years looks incomplete (< 50% of the prior year)."""
+    if len(sorted_years) < 2:
+        return False
+    last, prev = sorted_years[-1], sorted_years[-2]
+    return year_data[last]["minutes"] < 0.5 * year_data[prev]["minutes"]
+
+
+# ==============================================================================
 # Wrapped helpers
 # ==============================================================================
 
@@ -542,10 +554,8 @@ def get_wrapped(conn, year=None):
         return {"error": "No data available"}
     year_data = {int(y): {"plays": p, "minutes": int(m)} for y, p, m in years}
     sorted_years = sorted(year_data)
-    if len(sorted_years) >= 2:
-        last, prev = sorted_years[-1], sorted_years[-2]
-        if year_data[last]["minutes"] < 0.5 * year_data[prev]["minutes"]:
-            sorted_years = sorted_years[:-1]
+    if _is_partial_year(year_data, sorted_years):
+        sorted_years = sorted_years[:-1]
     if not sorted_years:
         return {"error": "No complete year available"}
     if year is None:
@@ -674,11 +684,9 @@ def get_yearly_trend(conn):
     max_minutes = max(y["minutes"] for y in year_data.values())
     sorted_years = sorted(year_data)
     partial_year = None
-    if len(sorted_years) >= 2:
-        last, prev = sorted_years[-1], sorted_years[-2]
-        if year_data[last]["minutes"] < 0.5 * year_data[prev]["minutes"]:
-            partial_year = last
-            year_data[last]["partial"] = True
+    if _is_partial_year(year_data, sorted_years):
+        partial_year = sorted_years[-1]
+        year_data[partial_year]["partial"] = True
     filtered = {
         y: d for y, d in year_data.items()
         if d["minutes"] >= max_minutes * 0.05 and not d.get("partial")
