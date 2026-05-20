@@ -375,9 +375,11 @@ def _validate_archive_files(files: List[Path], source_label: str, archive_type: 
     if username:
         conn = get_connection(username)
         init_db(conn)
-        db_total_rows = _get_db_total_rows(conn)
-        db_latest_ts = _get_db_latest_ts(conn)
-        conn.close()
+        try:
+            db_total_rows = _get_db_total_rows(conn)
+            db_latest_ts = _get_db_latest_ts(conn)
+        finally:
+            conn.close()
     else:
         db_total_rows = 0
         db_latest_ts = None
@@ -785,15 +787,16 @@ def onboarding_home(request: Request, user: Optional[str] = Depends(session_user
         return RedirectResponse("/login", status_code=302)
     force_import = request.query_params.get("import") == "1"
     if not force_import:
+        conn = get_connection(user)
+        init_db(conn)
         try:
-            conn = get_connection(user)
-            init_db(conn)
             count = conn.execute("SELECT COUNT(*) FROM plays").fetchone()[0]
-            conn.close()
             if count > 0:
                 return RedirectResponse("/dashboard", status_code=302)
         except Exception:
             pass
+        finally:
+            conn.close()
     index = FRONTEND_DIR / "index.html"
     if not index.exists():
         raise HTTPException(status_code=500, detail="Frontend assets are missing")
@@ -817,18 +820,13 @@ def users():
 @app.get("/stats")
 def stats(current_user: str = Depends(get_current_user)):
     """Get comprehensive listening statistics."""
+    conn = get_connection(current_user)
+    init_db(conn)
     try:
-        conn = get_connection(current_user)
-        init_db(conn)
-        
         overall = get_overall_stats(conn)
         profile = get_listening_profile_data(conn)
         top_artists_data = get_top_artists(conn, limit=10)
         top_tracks_data = get_top_tracks(conn, limit=10)
-        
-        conn.close()
-        
-        # Format response
         payload = {
             "overall": overall,
             "profile": profile,
@@ -839,39 +837,39 @@ def stats(current_user: str = Depends(get_current_user)):
             "top_tracks": [
                 {"name": track, "artist": artist, "minutes": int(minutes)}
                 for track, artist, minutes in top_tracks_data
-            ]
+            ],
         }
         return _with_meta(payload)
     except Exception as e:
         logger.error("Internal error in /stats: %s", e, exc_info=True)
         raise HTTPException(status_code=500, detail="Internal server error")
+    finally:
+        conn.close()
 
 
 @app.get("/top-artists")
 def top_artists(current_user: str = Depends(get_current_user), limit: int = Query(10, ge=1, le=100)):
     """Get top artists by listening time."""
+    conn = get_connection(current_user)
+    init_db(conn)
     try:
-        conn = get_connection(current_user)
-        init_db(conn)
         data = get_top_artists(conn, limit=limit)
-        conn.close()
-        
         payload = [{"name": artist, "minutes": int(minutes)} for artist, minutes in data]
         return _with_meta(payload)
     except Exception as e:
         logger.error("Internal error in /top-artists: %s", e, exc_info=True)
         raise HTTPException(status_code=500, detail="Internal server error")
+    finally:
+        conn.close()
 
 
 @app.get("/top-tracks")
 def top_tracks(current_user: str = Depends(get_current_user), limit: int = Query(10, ge=1, le=100)):
     """Get top tracks by listening time."""
+    conn = get_connection(current_user)
+    init_db(conn)
     try:
-        conn = get_connection(current_user)
-        init_db(conn)
         data = get_top_tracks(conn, limit=limit)
-        conn.close()
-        
         payload = [
             {"name": track, "artist": artist, "minutes": int(minutes)}
             for track, artist, minutes in data
@@ -880,17 +878,17 @@ def top_tracks(current_user: str = Depends(get_current_user), limit: int = Query
     except Exception as e:
         logger.error("Internal error in /top-tracks: %s", e, exc_info=True)
         raise HTTPException(status_code=500, detail="Internal server error")
+    finally:
+        conn.close()
 
 
 @app.get("/monthly")
 def monthly(current_user: str = Depends(get_current_user)) -> Dict[str, Any]:
     """Get monthly listening statistics."""
+    conn = get_connection(current_user)
+    init_db(conn)
     try:
-        conn = get_connection(current_user)
-        init_db(conn)
         data = get_monthly_stats(conn)
-        conn.close()
-        
         payload = [
             {"month": month, "plays": plays, "minutes": int(minutes)}
             for month, plays, minutes in data
@@ -899,17 +897,17 @@ def monthly(current_user: str = Depends(get_current_user)) -> Dict[str, Any]:
     except Exception as e:
         logger.error("Internal error in /monthly: %s", e, exc_info=True)
         raise HTTPException(status_code=500, detail="Internal server error")
+    finally:
+        conn.close()
 
 
 @app.get("/yearly")
 def yearly(current_user: str = Depends(get_current_user)) -> Dict[str, Any]:
     """Get yearly listening statistics."""
+    conn = get_connection(current_user)
+    init_db(conn)
     try:
-        conn = get_connection(current_user)
-        init_db(conn)
         data = get_yearly_stats(conn)
-        conn.close()
-        
         payload = [
             {"year": year, "plays": plays, "minutes": int(minutes)}
             for year, plays, minutes in data
@@ -918,17 +916,17 @@ def yearly(current_user: str = Depends(get_current_user)) -> Dict[str, Any]:
     except Exception as e:
         logger.error("Internal error in /yearly: %s", e, exc_info=True)
         raise HTTPException(status_code=500, detail="Internal server error")
+    finally:
+        conn.close()
 
 
 @app.get("/hourly")
 def hourly(current_user: str = Depends(get_current_user)) -> Dict[str, Any]:
     """Get hour-of-day listening statistics."""
+    conn = get_connection(current_user)
+    init_db(conn)
     try:
-        conn = get_connection(current_user)
-        init_db(conn)
         data = get_hourly_stats(conn)
-        conn.close()
-        
         payload = [
             {"hour": hour, "plays": plays, "minutes": int(minutes)}
             for hour, plays, minutes in data
@@ -937,20 +935,23 @@ def hourly(current_user: str = Depends(get_current_user)) -> Dict[str, Any]:
     except Exception as e:
         logger.error("Internal error in /hourly: %s", e, exc_info=True)
         raise HTTPException(status_code=500, detail="Internal server error")
+    finally:
+        conn.close()
 
 
 @app.get("/trends")
 def trends(current_user: str = Depends(get_current_user)) -> Dict[str, Any]:
     """Get yearly trend analysis."""
+    conn = get_connection(current_user)
+    init_db(conn)
     try:
-        conn = get_connection(current_user)
-        init_db(conn)
         data = get_yearly_trend(conn)
-        conn.close()
         return _with_meta(data)
     except Exception as e:
         logger.error("Internal error in /trends: %s", e, exc_info=True)
         raise HTTPException(status_code=500, detail="Internal server error")
+    finally:
+        conn.close()
 
 
 @app.get("/wrapped", include_in_schema=False)
@@ -966,16 +967,13 @@ def wrapped_page(user: Optional[str] = Depends(session_user)):
 @app.get("/api/wrapped")
 def wrapped(current_user: str = Depends(get_current_user), year: Optional[int] = Query(None, description="Specific year to analyze (defaults to most recent)")):
     """Get wrapped summary for a year."""
+    conn = get_connection(current_user)
+    init_db(conn)
     try:
-        conn = get_connection(current_user)
-        init_db(conn)
         year_str = str(year) if year else None
         data = get_wrapped(conn, year_str)
-        conn.close()
-
         if "error" in data:
             raise HTTPException(status_code=404, detail=data["error"])
-
         wrapped_year = data.get("year") if isinstance(data, dict) else year
         return _with_meta(data, year=wrapped_year)
     except HTTPException:
@@ -983,6 +981,8 @@ def wrapped(current_user: str = Depends(get_current_user), year: Optional[int] =
     except Exception as e:
         logger.error("Internal error in /api/wrapped: %s", e, exc_info=True)
         raise HTTPException(status_code=500, detail="Internal server error")
+    finally:
+        conn.close()
 
 
 @app.post("/onboarding/validate-archive")
@@ -1032,33 +1032,23 @@ async def onboarding_import_archive_zip(
 @app.get("/dashboard-summary")
 def dashboard_summary(current_user: str = Depends(get_current_user)) -> Dict[str, Any]:
     """Get comprehensive dashboard summary with aggregated stats."""
+    conn = get_connection(current_user)
+    init_db(conn)
     try:
-        conn = get_connection(current_user)
-        init_db(conn)
-        
-        # Get all the data needed for the dashboard
         overall = get_overall_stats(conn)
         profile = get_listening_profile_data(conn)
         date_range = get_date_range(conn)
         peak_month = get_peak_month(conn)
         unique_artists = get_unique_artist_count(conn)
         unique_tracks = get_unique_track_count(conn)
-        
-        # Get trends for insights
         trends_data = get_yearly_trend(conn)
-        
-        # Generate insights
         insights = []
         if trends_data and "insights" in trends_data:
             insights = trends_data.get("insights", [])[:3]
-        
-        # Add profile insight if available
         if profile:
             primary = profile.get("primary_profile", "").replace("_", " ").title()
             if primary:
                 insights.insert(0, f"{primary} is your dominant listening period")
-        
-        # Build response
         payload = {
             "totals": {
                 "total_plays": overall.get("total_plays", 0),
@@ -1068,47 +1058,44 @@ def dashboard_summary(current_user: str = Depends(get_current_user)) -> Dict[str
                 "unique_tracks": unique_tracks,
                 "date_range": {
                     "start": date_range.get("start"),
-                    "end": date_range.get("end")
-                }
+                    "end": date_range.get("end"),
+                },
             },
             "profile": {
                 "primary": profile.get("primary_profile", "unknown"),
                 "primary_pct": round(profile.get("primary_pct", 0), 1),
                 "bucket_pct": profile.get("bucket_pct", {}),
-                "peak_hour": profile.get("peak_hour")
+                "peak_hour": profile.get("peak_hour"),
             },
             "peaks": {
                 "peak_month": peak_month,
-                "peak_year": trends_data.get("peak_year") if trends_data else None
+                "peak_year": trends_data.get("peak_year") if trends_data else None,
             },
             "trends": {
                 "trend": trends_data.get("trend") if trends_data else "unknown",
-                "segments": trends_data.get("trend_segments", {}) if trends_data else {}
+                "segments": trends_data.get("trend_segments", {}) if trends_data else {},
             },
-            "insights": insights[:5]  # Return up to 5 insights
+            "insights": insights[:5],
         }
-        
-        conn.close()
         return _with_meta(payload)
     except Exception as e:
         logger.error("Internal error in /dashboard-summary: %s", e, exc_info=True)
         raise HTTPException(status_code=500, detail="Internal server error")
+    finally:
+        conn.close()
 
 
 @app.get("/dashboard-summary-filtered")
 def dashboard_summary_filtered(current_user: str = Depends(get_current_user), start: Optional[str] = None, end: Optional[str] = None) -> Dict[str, Any]:
     """Get dashboard summary filtered by date range (YYYY-MM format)."""
+    if start and (len(start) != 7 or start[4] != "-"):
+        raise HTTPException(status_code=400, detail="start must be in YYYY-MM format")
+    if end and (len(end) != 7 or end[4] != "-"):
+        raise HTTPException(status_code=400, detail="end must be in YYYY-MM format")
+
+    conn = get_connection(current_user)
+    init_db(conn)
     try:
-        if start:
-            if len(start) != 7 or start[4] != "-":
-                raise HTTPException(status_code=400, detail="start must be in YYYY-MM format")
-        if end:
-            if len(end) != 7 or end[4] != "-":
-                raise HTTPException(status_code=400, detail="end must be in YYYY-MM format")
-
-        conn = get_connection(current_user)
-        init_db(conn)
-
         overall = get_overall_stats_filtered(conn, start, end)
         monthly_data = get_monthly_stats_filtered(conn, start, end)
         hourly_data = get_hourly_stats_filtered(conn, start, end)
@@ -1120,18 +1107,13 @@ def dashboard_summary_filtered(current_user: str = Depends(get_current_user), st
         unique_tracks = get_unique_track_count_filtered(conn, start, end)
         date_range = get_date_range_filtered(conn, start, end)
         peak_month = get_peak_month_filtered(conn, start, end)
-
-        peak_year = None
-        if yearly_data:
-            peak_year = max(yearly_data, key=lambda row: row[2] or 0)[0]
-
+        peak_year = max(yearly_data, key=lambda row: row[2] or 0)[0] if yearly_data else None
         insights = []
         primary = profile.get("primary_profile", "unknown")
         if primary and primary != "unknown":
             insights.append(f"{primary.replace('_', ' ').title()} is your dominant listening period in this range")
         if peak_month:
             insights.append(f"{peak_month} is the strongest month in the selected range")
-
         summary_payload = {
             "totals": {
                 "total_plays": overall.get("total_plays", 0),
@@ -1139,25 +1121,18 @@ def dashboard_summary_filtered(current_user: str = Depends(get_current_user), st
                 "total_hours": overall.get("total_hours", 0),
                 "unique_artists": unique_artists,
                 "unique_tracks": unique_tracks,
-                "date_range": date_range
+                "date_range": date_range,
             },
             "profile": {
                 "primary": profile.get("primary_profile", "unknown"),
                 "primary_pct": round(profile.get("primary_pct", 0), 1),
                 "bucket_pct": profile.get("bucket_pct", {}),
-                "peak_hour": profile.get("peak_hour")
+                "peak_hour": profile.get("peak_hour"),
             },
-            "peaks": {
-                "peak_month": peak_month,
-                "peak_year": peak_year
-            },
-            "trends": {
-                "trend": "filtered_range",
-                "segments": {}
-            },
-            "insights": insights[:5]
+            "peaks": {"peak_month": peak_month, "peak_year": peak_year},
+            "trends": {"trend": "filtered_range", "segments": {}},
+            "insights": insights[:5],
         }
-
         payload = {
             "summary": summary_payload,
             "monthly": [
@@ -1181,14 +1156,12 @@ def dashboard_summary_filtered(current_user: str = Depends(get_current_user), st
                 for track, artist, minutes in top_tracks_data
             ],
         }
-
-        conn.close()
         return _with_meta(payload)
-    except HTTPException:
-        raise
     except Exception as e:
         logger.error("Internal error in /dashboard-summary-filtered: %s", e, exc_info=True)
         raise HTTPException(status_code=500, detail="Internal server error")
+    finally:
+        conn.close()
 
 
 @app.get("/dashboard", include_in_schema=False)
