@@ -43,6 +43,14 @@ function switchTab(tabName) {
 
   if (tabName === "overview") {
     refreshOverviewCharts();
+  } else if (tabName === "artists") {
+    renderArtistsTab();
+  } else if (tabName === "tracks") {
+    renderTracksTab();
+  } else if (tabName === "trends") {
+    renderTrendsTab();
+  } else if (tabName === "time") {
+    renderTimeTab();
   }
 }
 
@@ -605,6 +613,180 @@ function renderTopTracksTable(data) {
       <td class="minutes">${formatInteger(Math.round(track.minutes))}</td>
     `;
     tbody.appendChild(row);
+  });
+}
+
+function renderArtistsTab() {
+  if (!dashboardData || charts.artistsDetail) return;
+  const data = dashboardData.topArtists || [];
+
+  const ctx = document.getElementById("chart-artists-detail")?.getContext("2d");
+  if (ctx) {
+    const opts = horizontalChartOptions();
+    opts.maintainAspectRatio = false;
+    charts.artistsDetail = new Chart(ctx, {
+      type: "bar",
+      data: {
+        labels: data.map((e) => truncateLabel(e.name, 32)),
+        datasets: [{
+          label: "Minutes",
+          data: data.map((e) => Math.round(e.minutes)),
+          backgroundColor: "rgba(109, 40, 217, 0.82)",
+          borderRadius: 6,
+        }],
+      },
+      options: opts,
+    });
+  }
+
+  const list = document.getElementById("artists-list");
+  if (!list) return;
+  const table = document.createElement("table");
+  table.className = "data-table";
+  const thead = document.createElement("thead");
+  thead.innerHTML = "<tr><th>Rank</th><th>Artist</th><th class=\"minutes\">Minutes</th><th class=\"minutes\">Plays</th></tr>";
+  const tbody = document.createElement("tbody");
+  data.forEach((artist, i) => {
+    const row = document.createElement("tr");
+    row.innerHTML = `
+      <td class="rank">${i + 1}</td>
+      <td class="name" title="${escapeAttribute(artist.name)}">${escapeHtml(artist.name)}</td>
+      <td class="minutes">${formatInteger(Math.round(artist.minutes))}</td>
+      <td class="minutes">${formatInteger(artist.plays || 0)}</td>
+    `;
+    tbody.appendChild(row);
+  });
+  table.appendChild(thead);
+  table.appendChild(tbody);
+  list.appendChild(table);
+}
+
+function renderTracksTab() {
+  if (!dashboardData || charts.tracksDetail) return;
+  const data = dashboardData.topTracks || [];
+
+  const ctx = document.getElementById("chart-tracks-detail")?.getContext("2d");
+  if (ctx) {
+    const opts = horizontalChartOptions();
+    opts.maintainAspectRatio = false;
+    charts.tracksDetail = new Chart(ctx, {
+      type: "bar",
+      data: {
+        labels: data.map((e) => truncateLabel(`${e.name} — ${e.artist}`, 40)),
+        datasets: [{
+          label: "Minutes",
+          data: data.map((e) => Math.round(e.minutes)),
+          backgroundColor: "rgba(139, 92, 246, 0.72)",
+          borderRadius: 6,
+        }],
+      },
+      options: opts,
+    });
+  }
+
+  const list = document.getElementById("tracks-list");
+  if (!list) return;
+  const table = document.createElement("table");
+  table.className = "data-table";
+  const thead = document.createElement("thead");
+  thead.innerHTML = "<tr><th>Rank</th><th>Track</th><th>Artist</th><th class=\"minutes\">Minutes</th></tr>";
+  const tbody = document.createElement("tbody");
+  data.forEach((track, i) => {
+    const row = document.createElement("tr");
+    row.innerHTML = `
+      <td class="rank">${i + 1}</td>
+      <td class="name" title="${escapeAttribute(track.name)}">${escapeHtml(track.name)}</td>
+      <td class="artist" title="${escapeAttribute(track.artist)}">${escapeHtml(track.artist)}</td>
+      <td class="minutes">${formatInteger(Math.round(track.minutes))}</td>
+    `;
+    tbody.appendChild(row);
+  });
+  table.appendChild(thead);
+  table.appendChild(tbody);
+  list.appendChild(table);
+}
+
+function renderTrendsTab() {
+  if (!dashboardData || charts.yearlyDetail) return;
+  const data = dashboardData.yearly || [];
+
+  const ctx = document.getElementById("chart-yearly-detail")?.getContext("2d");
+  if (ctx) {
+    charts.yearlyDetail = new Chart(ctx, {
+      type: "bar",
+      data: {
+        labels: data.map((e) => e.year),
+        datasets: [{
+          label: "Minutes",
+          data: data.map((e) => e.minutes),
+          backgroundColor: data.map((_, i) =>
+            i === data.length - 1 ? "rgba(124, 58, 237, 0.45)" : "rgba(124, 58, 237, 0.82)"
+          ),
+          borderRadius: 6,
+        }],
+      },
+      options: baseChartOptions({ yTitle: "Minutes" }),
+    });
+  }
+
+  const tbody = document.getElementById("tbody-yearly");
+  if (!tbody) return;
+  data.forEach((entry) => {
+    const row = document.createElement("tr");
+    row.innerHTML = `
+      <td class="rank">${entry.year}</td>
+      <td class="minutes">${formatInteger(Math.round(entry.minutes || 0))}</td>
+      <td class="minutes">${formatInteger(Math.round((entry.minutes || 0) / 60))}</td>
+      <td class="minutes">${formatInteger(entry.plays || 0)}</td>
+    `;
+    tbody.appendChild(row);
+  });
+}
+
+function renderTimeTab() {
+  if (!dashboardData || charts.hourlyDetail) return;
+
+  const ctx = document.getElementById("chart-hourly-detail")?.getContext("2d");
+  if (ctx) {
+    const hourlyData = dashboardData.hourly || [];
+    charts.hourlyDetail = new Chart(ctx, {
+      type: "bar",
+      data: {
+        labels: hourlyData.map((e) => `${String(e.hour).padStart(2, "0")}:00`),
+        datasets: [{
+          label: "Plays",
+          data: hourlyData.map((e) => e.plays),
+          backgroundColor: "rgba(139, 92, 246, 0.82)",
+          borderRadius: 6,
+          maxBarThickness: 28,
+        }],
+      },
+      options: baseChartOptions({ yTitle: "Plays" }),
+    });
+  }
+
+  const container = document.getElementById("time-profile-cards");
+  if (!container) return;
+  const profile = dashboardData.summary?.profile || {};
+  const bucketPct = profile.bucket_pct || {};
+  const PERIOD_HOURS = {
+    morning: "6am – 12pm",
+    afternoon: "12pm – 6pm",
+    evening: "6pm – 10pm",
+    night: "10pm – 6am",
+  };
+
+  PROFILE_ORDER.forEach((key) => {
+    const pct = Math.round(bucketPct[key] || 0);
+    const card = document.createElement("div");
+    card.className = "time-profile-card";
+    card.innerHTML = `
+      <div class="time-profile-swatch" style="background:${PROFILE_COLORS[key]}"></div>
+      <div class="time-profile-name">${escapeHtml(formatPeriod(key))}</div>
+      <div class="time-profile-hours">${PERIOD_HOURS[key] || ""}</div>
+      <div class="time-profile-pct">${pct}%</div>
+    `;
+    container.appendChild(card);
   });
 }
 

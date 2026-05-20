@@ -889,6 +889,91 @@ body.dark-mode .data-table tbody tr:hover {
   font-family: "IBM Plex Mono", monospace;
 }
 
+/* Detail tab charts (top 25 horizontal bars) */
+.chart-container-detail canvas {
+  height: 660px !important;
+  max-height: none;
+}
+
+/* Time profile grid */
+.time-profile-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+}
+
+.time-profile-card {
+  background: white;
+  border-radius: var(--radius);
+  padding: 1.75rem 1.5rem;
+  text-align: center;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid rgba(139, 92, 246, 0.1);
+  transition: all 0.3s ease;
+}
+
+body.dark-mode .time-profile-card {
+  background: var(--neutral-200);
+  border-color: rgba(139, 92, 246, 0.2);
+}
+
+.time-profile-swatch {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  margin: 0 auto 0.9rem;
+}
+
+.time-profile-name {
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--neutral-900);
+  margin-bottom: 0.2rem;
+}
+
+.time-profile-hours {
+  font-size: 0.8rem;
+  color: var(--neutral-500);
+  font-family: "IBM Plex Mono", monospace;
+  margin-bottom: 0.9rem;
+}
+
+.time-profile-pct {
+  font-size: 2.25rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Wrapped CTA */
+.wrapped-cta-panel {
+  background: white;
+  border-radius: var(--radius);
+  padding: 3rem 2rem;
+  text-align: center;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid rgba(139, 92, 246, 0.1);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.75rem;
+}
+
+body.dark-mode .wrapped-cta-panel {
+  background: var(--neutral-200);
+  border-color: rgba(139, 92, 246, 0.2);
+}
+
+.wrapped-cta-panel p {
+  max-width: 38rem;
+  color: var(--neutral-700);
+  font-size: 1.05rem;
+  line-height: 1.65;
+  margin: 0;
+}
+
 /* Footer */
 .dashboard-footer {
   text-align: center;
@@ -920,6 +1005,14 @@ body.dark-mode .data-table tbody tr:hover {
 }
 
 @media (max-width: 768px) {
+  .time-profile-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .chart-container-detail canvas {
+    height: 500px !important;
+  }
+
   .dashboard-header {
     padding: 1.5rem;
   }

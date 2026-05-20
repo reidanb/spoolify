@@ -191,39 +191,104 @@
 
       <!-- Tab: Trends -->
       <section id="trends-tab" class="dashboard-tab">
-        <div class="section-content">
-          <p class="section-placeholder">Trends analysis coming soon</p>
-        </div>
+        <section class="section-group">
+          <div class="section-heading">
+            <h2>Year by Year</h2>
+            <p>Total listening time per year across your full archive.</p>
+          </div>
+          <div class="chart-container chart-container-featured">
+            <canvas id="chart-yearly-detail"></canvas>
+          </div>
+        </section>
+        <section class="section-group">
+          <div class="section-heading">
+            <h2>Annual Breakdown</h2>
+            <p>Full numbers behind each year.</p>
+          </div>
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Year</th>
+                  <th class="minutes">Minutes</th>
+                  <th class="minutes">Hours</th>
+                  <th class="minutes">Plays</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-yearly"></tbody>
+            </table>
+          </div>
+        </section>
       </section>
 
       <!-- Tab: Artists -->
       <section id="artists-tab" class="dashboard-tab">
-        <div class="section-content">
-          <canvas id="chart-artists-detail" style="max-height: 400px;"></canvas>
-          <div id="artists-list"></div>
-        </div>
+        <section class="section-group">
+          <div class="section-heading">
+            <h2>Top Artists</h2>
+            <p>Your 25 most-listened artists ranked by total listening time.</p>
+          </div>
+          <div class="chart-container chart-container-detail">
+            <canvas id="chart-artists-detail"></canvas>
+          </div>
+        </section>
+        <section class="section-group">
+          <div class="table-container">
+            <div id="artists-list"></div>
+          </div>
+        </section>
       </section>
 
       <!-- Tab: Tracks -->
       <section id="tracks-tab" class="dashboard-tab">
-        <div class="section-content">
-          <canvas id="chart-tracks-detail" style="max-height: 400px;"></canvas>
-          <div id="tracks-list"></div>
-        </div>
+        <section class="section-group">
+          <div class="section-heading">
+            <h2>Top Tracks</h2>
+            <p>Your 25 most-listened tracks ranked by total listening time.</p>
+          </div>
+          <div class="chart-container chart-container-detail">
+            <canvas id="chart-tracks-detail"></canvas>
+          </div>
+        </section>
+        <section class="section-group">
+          <div class="table-container">
+            <div id="tracks-list"></div>
+          </div>
+        </section>
       </section>
 
       <!-- Tab: Time -->
       <section id="time-tab" class="dashboard-tab">
-        <div class="section-content">
-          <p class="section-placeholder">Time analysis coming soon</p>
-        </div>
+        <section class="section-group">
+          <div class="section-heading">
+            <h2>Hour of Day</h2>
+            <p>When you tend to listen across a typical day.</p>
+          </div>
+          <div class="chart-container chart-container-featured">
+            <canvas id="chart-hourly-detail"></canvas>
+          </div>
+        </section>
+        <section class="section-group">
+          <div class="section-heading">
+            <h2>Listening Profile</h2>
+            <p>Your listening split across the four parts of the day.</p>
+          </div>
+          <div id="time-profile-cards" class="time-profile-grid"></div>
+        </section>
       </section>
 
       <!-- Tab: Wrapped -->
       <section id="wrapped-tab" class="dashboard-tab">
-        <div class="section-content">
-          <p class="section-placeholder">Wrapped summary coming soon</p>
-        </div>
+        <section class="section-group">
+          <div class="section-heading">
+            <h2>Wrapped Summary</h2>
+            <p>A full Spotify Wrapped-style summary generated from your local archive.</p>
+          </div>
+          <div class="wrapped-cta-panel">
+            <p>Top artists, top tracks, peak month, listening streaks, milestones, and more — all built from the same data powering this dashboard. No internet connection needed.</p>
+            <a href="/wrapped" target="_blank" rel="noreferrer" class="btn btn-primary">Open Wrapped →</a>
+          </div>
+        </section>
       </section>
     </main>
 
@@ -234,6 +299,6 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <script src="/frontend/dashboard.js?v=4"></script>
+  <script src="/frontend/dashboard.js?v=5"></script>
 </body>
 </html>
