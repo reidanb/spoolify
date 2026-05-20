@@ -25,7 +25,6 @@
         <div class="header-actions">
           <button id="btn-wrapped" class="btn btn-primary" title="View Wrapped">View Wrapped</button>
           <button id="btn-import" class="btn btn-secondary" title="Import More Data">Import More Data</button>
-          <a href="/docs" class="btn btn-ghost" title="View API Docs" target="_blank">API Docs</a>
           <button id="theme-toggle" class="theme-toggle-btn" title="Toggle Dark Mode" aria-label="Toggle dark mode">🌙</button>
           <form method="post" action="/auth/logout" style="margin:0">
             <button type="submit" class="btn btn-ghost" title="Sign out">Sign out</button>
@@ -102,7 +101,7 @@
         <section class="section-group">
           <div class="section-heading">
             <h2>Charts</h2>
-            <p>The long view first, then the supporting patterns around time, artists, and tracks.</p>
+            <p>Monthly activity, hourly patterns, and yearly overview of your listening history.</p>
           </div>
 
           <!-- Date Range Slider -->
@@ -125,6 +124,7 @@
               <span class="date-range-label-separator">to</span>
               <span id="date-range-end-label">—</span>
             </div>
+            <p class="date-range-hint">Drag either handle to narrow the date range</p>
           </div>
 
         <div class="featured-chart-grid">
@@ -187,46 +187,6 @@
           </div>
         </section>
 
-        <section class="section-group">
-          <div class="section-heading">
-            <h2>Detailed Rankings</h2>
-            <p>The fuller cut of your top artists and tracks beyond the overview charts.</p>
-          </div>
-
-        <div class="tables-grid">
-          <div class="table-container">
-            <h3>Top Artists (Detailed)</h3>
-            <table class="data-table" id="table-top-artists">
-              <thead>
-                <tr>
-                  <th>Rank</th>
-                  <th>Artist</th>
-                  <th>Minutes</th>
-                </tr>
-              </thead>
-              <tbody id="tbody-artists">
-                <!-- Populated by JS -->
-              </tbody>
-            </table>
-          </div>
-          <div class="table-container">
-            <h3>Top Tracks (Detailed)</h3>
-            <table class="data-table" id="table-top-tracks">
-              <thead>
-                <tr>
-                  <th>Rank</th>
-                  <th>Track</th>
-                  <th>Artist</th>
-                  <th>Minutes</th>
-                </tr>
-              </thead>
-              <tbody id="tbody-tracks">
-                <!-- Populated by JS -->
-              </tbody>
-            </table>
-          </div>
-        </div>
-        </section>
       </section>
 
       <!-- Tab: Trends -->
@@ -270,13 +230,10 @@
     <!-- Footer -->
     <footer class="dashboard-footer">
       <p>Spoolify keeps your history local and queryable.</p>
-      <div class="footer-actions">
-        <a href="/?import=1" class="btn btn-secondary footer-btn">Go to Import Flow</a>
-      </div>
     </footer>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <script src="/frontend/dashboard.js"></script>
+  <script src="/frontend/dashboard.js?v=4"></script>
 </body>
 </html>

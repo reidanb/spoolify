@@ -288,8 +288,9 @@ body.dark-mode .theme-toggle-btn:hover {
 
 .section-heading h2 {
   margin: 0 0 0.35rem;
-  font-size: 1.25rem;
+  font-size: 1.4rem;
   color: var(--neutral-900);
+  font-weight: 700;
 }
 
 .section-heading p {
@@ -300,17 +301,15 @@ body.dark-mode .theme-toggle-btn:hover {
 
 /* Date Range Slider Styles */
 .date-range-container {
-  background: #ffffff;
+  background: transparent;
   border: 1px solid var(--neutral-200);
   border-radius: var(--radius);
-  padding: 1.5rem;
-  margin-bottom: 2rem;
-  box-shadow: var(--shadow-sm);
-  transition: background-color 0.3s ease, border-color 0.3s ease;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.25rem;
+  transition: border-color 0.3s ease;
 }
 
 body.dark-mode .date-range-container {
-  background: var(--neutral-200);
   border-color: var(--neutral-300);
 }
 
@@ -364,9 +363,9 @@ body.dark-mode .date-range-container {
   top: 50%;
   left: 0;
   right: 0;
-  height: 4px;
+  height: 6px;
   background: var(--neutral-200);
-  border-radius: 2px;
+  border-radius: 3px;
   transform: translateY(-50%);
   pointer-events: none;
   z-index: 1;
@@ -376,9 +375,9 @@ body.dark-mode .date-range-container {
   position: absolute;
   top: 50%;
   left: 0;
-  height: 4px;
+  height: 6px;
   background: var(--primary);
-  border-radius: 2px;
+  border-radius: 3px;
   transform: translateY(-50%);
   pointer-events: none;
   z-index: 2;
@@ -404,11 +403,11 @@ body.dark-mode .date-range-container {
 .date-range-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
   background: var(--primary);
-  cursor: pointer;
+  cursor: grab;
   pointer-events: auto;
   border: 3px solid #ffffff;
   box-shadow: var(--shadow-md);
@@ -416,17 +415,17 @@ body.dark-mode .date-range-container {
 }
 
 .date-range-slider::-webkit-slider-thumb:hover {
-  width: 24px;
-  height: 24px;
-  box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.2), var(--shadow-lg);
+  width: 28px;
+  height: 28px;
+  box-shadow: 0 0 0 5px rgba(139, 92, 246, 0.2), var(--shadow-lg);
 }
 
 .date-range-slider::-moz-range-thumb {
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
   background: var(--primary);
-  cursor: pointer;
+  cursor: grab;
   pointer-events: auto;
   border: 3px solid #ffffff;
   box-shadow: var(--shadow-md);
@@ -434,9 +433,9 @@ body.dark-mode .date-range-container {
 }
 
 .date-range-slider::-moz-range-thumb:hover {
-  width: 24px;
-  height: 24px;
-  box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.2), var(--shadow-lg);
+  width: 28px;
+  height: 28px;
+  box-shadow: 0 0 0 5px rgba(139, 92, 246, 0.2), var(--shadow-lg);
 }
 
 .date-range-labels {
@@ -444,14 +443,15 @@ body.dark-mode .date-range-container {
   justify-content: center;
   align-items: center;
   gap: 1rem;
-  font-size: 0.875rem;
-  color: var(--neutral-500);
+  font-size: 0.95rem;
+  color: var(--neutral-700);
   font-family: "IBM Plex Mono", monospace;
+  font-weight: 500;
 }
 
 .date-range-label-separator {
-  font-size: 0.75rem;
-  color: var(--neutral-300);
+  font-size: 0.8rem;
+  color: var(--neutral-500);
 }
 
 .reveal {
@@ -565,9 +565,10 @@ body.dark-mode .loading-overlay {
 /* Hero Metrics */
 .hero-metrics {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(4, 1fr);
   gap: 1rem;
 }
+
 
 .metric-card {
   background: white;
@@ -590,7 +591,7 @@ body.dark-mode .metric-card {
 }
 
 .metric-label {
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   color: var(--neutral-600);
   font-weight: 500;
   margin-bottom: 0.5rem;
@@ -614,7 +615,7 @@ body.dark-mode .metric-card {
 }
 
 .metric-sub {
-  font-size: 0.8rem;
+  font-size: 0.875rem;
   color: var(--neutral-500);
 }
 
@@ -633,7 +634,7 @@ body.dark-mode .metric-card {
 }
 
 .charts-grid-secondary {
-  align-items: start;
+  align-items: stretch;
 }
 
 .chart-container {
@@ -656,6 +657,10 @@ body.dark-mode .chart-container {
 
 .chart-container.wide {
   grid-column: span 2;
+}
+
+.chart-container.wide canvas {
+  max-height: 420px;
 }
 
 .chart-header {
@@ -735,12 +740,13 @@ body.dark-mode .chart-container {
 }
 
 .insight-card {
-  background: linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(240, 147, 251, 0.1) 100%);
-  border: 1px solid rgba(139, 92, 246, 0.2);
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(240, 147, 251, 0.07) 100%);
+  border: 1px solid rgba(139, 92, 246, 0.22);
   border-radius: var(--radius-sm);
   padding: 1.25rem;
   display: grid;
   gap: 0.45rem;
+  box-shadow: var(--shadow-sm);
 }
 
 .insight-kicker {
@@ -809,7 +815,7 @@ body.dark-mode .data-table thead {
 }
 
 .data-table th {
-  padding: 0.75rem;
+  padding: 0.875rem 0.75rem;
   text-align: left;
   font-weight: 600;
   color: var(--neutral-700);
@@ -823,7 +829,7 @@ body.dark-mode .data-table th {
 }
 
 .data-table td {
-  padding: 0.75rem;
+  padding: 0.875rem 0.75rem;
   border-bottom: 1px solid var(--neutral-100);
   transition: border-color 0.3s ease;
 }
@@ -832,8 +838,12 @@ body.dark-mode .data-table td {
   border-bottom: 1px solid var(--neutral-300);
 }
 
-.data-table tbody tr:hover {
+.data-table tbody tr:nth-child(even) {
   background: var(--neutral-50);
+}
+
+.data-table tbody tr:hover {
+  background: var(--neutral-100);
   transition: background-color 0.2s ease;
 }
 
@@ -850,7 +860,7 @@ body.dark-mode .data-table tbody tr:hover {
 .data-table .name {
   font-weight: 500;
   color: var(--neutral-900);
-  max-width: 15rem;
+  max-width: 22rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -858,7 +868,7 @@ body.dark-mode .data-table tbody tr:hover {
 
 .data-table .artist {
   color: var(--neutral-600);
-  max-width: 13rem;
+  max-width: 18rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -870,21 +880,22 @@ body.dark-mode .data-table tbody tr:hover {
   font-variant-numeric: tabular-nums;
 }
 
+/* Date Range Hint */
+.date-range-hint {
+  margin: 0.6rem 0 0;
+  text-align: center;
+  font-size: 0.875rem;
+  color: var(--neutral-700);
+  font-family: "IBM Plex Mono", monospace;
+}
+
 /* Footer */
 .dashboard-footer {
   text-align: center;
-  padding: 2rem;
+  padding: 1.25rem 2rem;
   color: var(--neutral-600);
-  font-size: 0.9rem;
+  font-size: 0.875rem;
   border-top: 1px solid var(--neutral-200);
-}
-
-.footer-actions {
-  margin-top: 1rem;
-}
-
-.footer-btn {
-  min-width: 12rem;
 }
 
 /* Responsive */
@@ -895,7 +906,7 @@ body.dark-mode .data-table tbody tr:hover {
   }
 
   .hero-metrics {
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    grid-template-columns: repeat(3, 1fr);
   }
 
   .chart-container.wide {
