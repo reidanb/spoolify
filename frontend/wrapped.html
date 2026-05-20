@@ -82,7 +82,7 @@
     /* ── Ranked list ── */
     .ranked-list { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:.95rem; }
     .ranked-item { display:flex; align-items:flex-start; gap:.9rem; }
-    .rank-n { font-family:"IBM Plex Mono",monospace; font-size:.78rem; color:var(--muted); width:1.3rem; flex-shrink:0; text-align:right; padding-top:.15rem; }
+    .rank-n { font-family:"IBM Plex Mono",monospace; font-size:.78rem; color:var(--muted); width:2rem; flex-shrink:0; text-align:right; padding-top:.15rem; }
     .rank-n.r1 { color:var(--acc); font-weight:700; }
     .rank-n.r2 { color:#e5e7eb; }
     .rank-n.r3 { color:#cd7f32; }
@@ -128,7 +128,7 @@
 
     /* ── Bar charts ── */
     .bar-chart { display:flex; align-items:flex-end; gap:4px; height:80px; }
-    .bar-col { flex:1; display:flex; flex-direction:column; align-items:center; gap:3px; }
+    .bar-col { flex:1; display:flex; flex-direction:column; align-items:center; gap:3px; justify-content:flex-end; }
     .bar-fill { width:100%; border-radius:3px 3px 0 0; background:linear-gradient(180deg,var(--pl),var(--primary)); transition:height .6s cubic-bezier(.4,0,.2,1); min-height:2px; }
     .bar-fill.peak { background:linear-gradient(180deg,var(--sec),#be185d); }
     .bar-lbl { font-size:.6rem; color:var(--muted); font-family:"IBM Plex Mono",monospace; white-space:nowrap; }
@@ -141,7 +141,7 @@
     .platform-list { display:flex; flex-direction:column; gap:.6rem; }
     .plat-row { display:flex; align-items:center; gap:.7rem; }
     .plat-name { font-size:.82rem; color:var(--text); flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .plat-bar-track { width:120px; flex-shrink:0; height:6px; background:rgba(255,255,255,.08); border-radius:3px; overflow:hidden; }
+    .plat-bar-track { width:80px; flex-shrink:0; height:6px; background:rgba(255,255,255,.08); border-radius:3px; overflow:hidden; }
     .plat-bar-fill { height:100%; border-radius:3px; background:linear-gradient(90deg,var(--teal),#67e8f9); }
     .plat-pct { font-family:"IBM Plex Mono",monospace; font-size:.76rem; color:var(--muted); width:3rem; text-align:right; flex-shrink:0; }
 
@@ -268,7 +268,7 @@
       </div>
       <div class="card card-h" style="text-align:center">
         <div class="stat-val gt" id="s-hour">—</div>
-        <div class="stat-lbl">Peak Hour (UTC) <i class="si" tabindex="0" data-tip="The UTC hour of day with the most listening time. Spotify's export stores all timestamps in UTC, and shifting by browser timezone would be wrong for anyone who observes DST — the offset changes mid-year.">i</i></div>
+        <div class="stat-lbl">Peak Hour <i class="si" tabindex="0" data-tip="The hour of day (UTC) with the most listening time. Spotify stores all timestamps in UTC — local times will differ by your timezone offset.">i</i></div>
       </div>
       <div class="card card-h" style="text-align:center">
         <div class="stat-val gg" id="s-streak">—</div>
@@ -435,8 +435,11 @@ function fmtHour(h) {
   return `${d} ${p}`;
 }
 function fmtMonth(m) {
-  if(!m) return "—";
-  return MONTHS[parseInt(m,10)-1]||m;
+  if(m === null || m === undefined || m === "") return "—";
+  // Handle "YYYY-MM" format — extract just the month part
+  if(typeof m === "string" && m.includes("-")) m = m.split("-").pop();
+  const idx = parseInt(m, 10) - 1;
+  return (idx >= 0 && idx < 12) ? MONTHS[idx] : String(m);
 }
 function fmtDate(ts) {
   if(!ts) return "—";
@@ -574,11 +577,11 @@ function renderMonthly(rows, peakMonthNum) {
   const peakM=parseInt(peakMonthNum,10)||0;
   let html='<div class="bar-chart">';
   rows.forEach(r=>{
-    const pct=Math.max(r.minutes/maxM*100,2);
+    const barH=Math.max(r.minutes/maxM*68,2).toFixed(0);
     const isPeak=r.month===peakM;
     const hrs=Math.round(r.minutes/60);
     html+=`<div class="bar-col" title="${MONTHS_FULL[r.month-1]}: ${hrs}h, ${r.plays.toLocaleString()} plays">
-      <div class="bar-fill${isPeak?" peak":""}" style="height:${pct}%"></div>
+      <div class="bar-fill${isPeak?" peak":""}" style="height:${barH}px"></div>
       <div class="bar-lbl">${MONTHS[r.month-1]}</div></div>`;
   });
   html+="</div>";
@@ -595,10 +598,10 @@ function renderWeekday(wdMap) {
   const topIdx=vals.indexOf(Math.max(...vals));
   let html='<div class="bar-chart">';
   keys.forEach((k,i)=>{
-    const pct=Math.max(vals[i]/maxV*100,2);
+    const barH=Math.max(vals[i]/maxV*68,2).toFixed(0);
     const hrs=Math.round(vals[i]/60);
     html+=`<div class="bar-col" title="${k}: ${hrs}h">
-      <div class="bar-fill${i===topIdx?" peak":""}" style="height:${pct}%"></div>
+      <div class="bar-fill${i===topIdx?" peak":""}" style="height:${barH}px"></div>
       <div class="bar-lbl">${k}</div></div>`;
   });
   html+="</div>";
@@ -647,7 +650,8 @@ function renderSkip(skip) {
       <div class="stat-lbl">of plays logged as skipped</div>
       <div style="font-size:.75rem;color:var(--muted);margin-top:.4rem;line-height:1.4">Includes shuffle and autoplay tracks Spotify marked as skipped before completion.</div>
     </div>`;
-  renderRanked(document.getElementById("skipped-list"), skip.most_skipped_tracks,
+  const skippedItems=(skip.most_skipped_tracks||[]).map(item=>({...item,minutes:item.skips}));
+  renderRanked(document.getElementById("skipped-list"), skippedItems,
     item=>`<div class="rank-name">${item.track}</div><div class="rank-sub">${item.artist} · ${item.skips} skips</div>`);
   if(!skip.most_skipped_tracks?.length) document.getElementById("skipped-card").style.display="none";
 }
