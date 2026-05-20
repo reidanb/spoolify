@@ -84,9 +84,9 @@ def run_api():
         print("Error: FastAPI and uvicorn are required for API mode.")
         print("Install with: pip install fastapi uvicorn")
         sys.exit(1)
-    
+
     from api import app
-    
+
     # Parse optional host:port from remaining args
     host = os.environ.get("SPOOLIFY_API_HOST", "0.0.0.0")
     port = int(os.environ.get("SPOOLIFY_API_PORT", "8000"))
@@ -118,7 +118,7 @@ def main():
         print("  insights         Show listening insights and trends")
         print("  wrapped [--year <year>]  Show yearly wrapped summary")
         sys.exit(1)
-    
+
     command = sys.argv[1]
 
     if command == "serve":

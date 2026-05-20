@@ -2,7 +2,6 @@ import json
 import sqlite3
 import tempfile
 import os
-import pytest
 from db import init_db
 from importer import generate_hash, import_file_stats
 

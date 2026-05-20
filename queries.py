@@ -1,4 +1,4 @@
-from query_data import get_listening_profile_data, get_yearly_trend, get_wrapped
+from query_data import get_listening_profile_data, get_yearly_trend
 
 
 def print_stats(conn):

@@ -5,6 +5,7 @@ Exposes analytics endpoints, onboarding helpers, and import APIs.
 
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Optional, List, Dict, Any
 import json
 import logging
 import os
@@ -12,14 +13,11 @@ import shutil
 import tempfile
 import zipfile
 
-logger = logging.getLogger(__name__)
-
 from fastapi import FastAPI, Query, HTTPException, UploadFile, File, Form, Cookie, Depends, Request
 from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
-from typing import Optional, List, Dict, Any
-from db import get_connection, init_db, list_users
+from db import get_connection, init_db, list_users, _safe_username
 from auth import (
     user_count, create_user, verify_user,
     make_session_token, verify_session_token,
@@ -38,6 +36,8 @@ from query_data import (
     get_date_range_filtered, get_peak_month_filtered,
     get_yearly_trend, get_wrapped,
 )
+
+logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="Spoolify API",

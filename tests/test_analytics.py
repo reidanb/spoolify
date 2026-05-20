@@ -1,5 +1,4 @@
 import sqlite3
-import pytest
 from db import init_db
 from query_data import _is_partial_year, get_wrapped, get_yearly_trend
 
