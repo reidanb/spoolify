@@ -388,6 +388,12 @@ function resetImportPresentation() {
 function updateDoneState(payload) {
   const outcome = classifyImport(payload);
   if (donePanel) {
+    const step = donePanel.closest(".step");
+    if (step) {
+      Array.from(step.children).forEach((child) => {
+        if (child !== donePanel) child.classList.add("hidden");
+      });
+    }
     donePanel.classList.remove("hidden");
   }
   doneMessage.textContent = outcome.doneMessage;
@@ -566,6 +572,12 @@ function resetFlow() {
   zipSelected.textContent = "No ZIP selected.";
   selectedImportMode = "historical_backfill";
   if (donePanel) {
+    const step = donePanel.closest(".step");
+    if (step) {
+      Array.from(step.children).forEach((child) => {
+        child.classList.remove("hidden");
+      });
+    }
     donePanel.classList.add("hidden");
   }
   setStatusBanner(validationStatus, validationPill, validationTitle, validationMessage, {
