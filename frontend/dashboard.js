@@ -624,13 +624,14 @@ function baseChartOptions({ xTickLimit, xTickCallback, yTitle } = {}) {
     scales: {
       y: {
         beginAtZero: true,
-        ticks: { color: "#6b7280" },
+        ticks: { color: "#4b5563", font: { size: 13 } },
         grid: { color: "rgba(109, 40, 217, 0.08)" },
-        title: yTitle ? { display: true, text: yTitle, color: "#6b7280" } : undefined,
+        title: yTitle ? { display: true, text: yTitle, color: "#4b5563", font: { size: 13 } } : undefined,
       },
       x: {
         ticks: {
-          color: "#6b7280",
+          color: "#4b5563",
+          font: { size: 13 },
           maxTicksLimit: xTickLimit,
           callback: xTickCallback,
         },
@@ -657,11 +658,11 @@ function horizontalChartOptions() {
     scales: {
       x: {
         beginAtZero: true,
-        ticks: { color: "#6b7280" },
+        ticks: { color: "#4b5563", font: { size: 12 } },
         grid: { color: "rgba(109, 40, 217, 0.08)" },
       },
       y: {
-        ticks: { color: "#6b7280" },
+        ticks: { color: "#374151", font: { size: 14 } },
         grid: { display: false },
       },
     },
