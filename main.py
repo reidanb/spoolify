@@ -3,9 +3,10 @@ import os
 from db import get_connection, init_db
 from importer import import_file
 from queries import (
-    print_top_artists, print_top_tracks, print_monthly, print_yearly, 
-    print_hourly, print_insights, print_stats, get_yearly_trend, get_wrapped
+    print_top_artists, print_top_tracks, print_monthly, print_yearly,
+    print_hourly, print_insights, print_stats,
 )
+from query_data import get_yearly_trend, get_wrapped
 
 def print_usage():
     exe = os.path.basename(sys.argv[0])

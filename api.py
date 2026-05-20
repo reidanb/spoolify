@@ -27,7 +27,7 @@ from auth import (
 )
 from importer import import_file_stats
 from query_data import (
-    get_top_artists, get_top_tracks, get_monthly_stats, 
+    get_top_artists, get_top_tracks, get_monthly_stats,
     get_yearly_stats, get_hourly_stats, get_overall_stats,
     get_listening_profile_data, get_unique_artist_count,
     get_unique_track_count, get_date_range, get_peak_month,
@@ -35,9 +35,9 @@ from query_data import (
     get_unique_track_count_filtered, get_monthly_stats_filtered,
     get_hourly_stats_filtered, get_yearly_stats_filtered,
     get_top_artists_filtered, get_top_tracks_filtered,
-    get_date_range_filtered, get_peak_month_filtered
+    get_date_range_filtered, get_peak_month_filtered,
+    get_yearly_trend, get_wrapped,
 )
-from queries import get_yearly_trend, get_wrapped
 
 app = FastAPI(
     title="Spoolify API",
