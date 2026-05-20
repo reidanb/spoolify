@@ -83,34 +83,34 @@ def main():
     # All other commands require database connection
     conn = get_connection(username)
     init_db(conn)
-    
+
     try:
         if command == "stats":
             print_stats(conn)
-        
+
         elif command == "top-artists":
             print_top_artists(conn)
-        
+
         elif command == "top-tracks":
             print_top_tracks(conn)
-        
+
         elif command == "monthly":
             print_monthly(conn)
-        
+
         elif command == "yearly":
             print_yearly(conn)
-        
+
         elif command == "hourly":
             print_hourly(conn)
-        
+
         elif command == "trends":
             trend = get_yearly_trend(conn)
             import json
             print(json.dumps(trend, indent=2))
-        
+
         elif command == "insights":
             print_insights(conn)
-        
+
         elif command == "wrapped":
             import json
             year = None
@@ -122,9 +122,9 @@ def main():
                 wrapped_args.remove("--json")
             if len(wrapped_args) >= 2 and wrapped_args[0] == "--year":
                 year = wrapped_args[1]
-            
+
             result = get_wrapped(conn, year)
-            
+
             if as_json:
                 print(json.dumps(result, indent=2, ensure_ascii=False))
             else:
@@ -148,12 +148,12 @@ def main():
                     for label, pct in result['profile']['bucket_pct'].items():
                         print(f"  {label.title():<9}: {pct:.1f}% of listening time")
                     print(f"Primary profile: {result['profile']['primary']}")
-        
+
         else:
             print(f"Unknown command: {command}")
             print_usage()
             sys.exit(1)
-    
+
     finally:
         conn.close()
 

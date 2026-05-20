@@ -14,7 +14,7 @@ def _validate_month_param(value):
     if value is None:
         return None
     if not _MONTH_RE.match(value):
-        raise ValueError(f"Invalid month format: expected YYYY-MM")
+        raise ValueError("Invalid month format: expected YYYY-MM")
     return value
 
 
@@ -128,10 +128,10 @@ def get_overall_stats(conn):
     total_minutes = int(total_ms // 60000)
     total_minutes_exact = total_ms / 60000.0
     total_hours = total_minutes / 60
-    
+
     cur.execute('SELECT COUNT(*) FROM plays')
     total_plays = cur.fetchone()[0]
-    
+
     return {
         "total_minutes": total_minutes,
         "total_minutes_exact": total_minutes_exact,
@@ -168,7 +168,7 @@ def get_listening_profile_data(conn):
         label: (bucket_minutes[label] / total_minutes * 100) if total_minutes > 0 else 0
         for label in bucket_labels
     }
-    primary_label = max(bucket_labels, key=lambda l: bucket_pct[l])
+    primary_label = max(bucket_labels, key=lambda label: bucket_pct[label])
     primary_pct = bucket_pct[primary_label]
     if primary_pct > 40:
         confidence = "high"
@@ -244,10 +244,10 @@ def get_overall_stats_filtered(conn, start_month=None, end_month=None):
     total_minutes = int(total_ms // 60000)
     total_minutes_exact = total_ms / 60000.0
     total_hours = total_minutes / 60
-    
+
     cur.execute(f'SELECT COUNT(*) FROM plays {where_clause}', params)
     total_plays = cur.fetchone()[0]
-    
+
     return {
         "total_minutes": total_minutes,
         "total_minutes_exact": total_minutes_exact,
@@ -621,7 +621,7 @@ def get_wrapped(conn, year=None):
         label: (bucket_minutes[label] / total_minutes * 100) if total_minutes > 0 else 0
         for label in bucket_labels
     }
-    primary_label = max(bucket_labels, key=lambda l: bucket_pct[l]) if total_minutes > 0 else None
+    primary_label = max(bucket_labels, key=lambda label: bucket_pct[label]) if total_minutes > 0 else None
     year_str = str(target_year)
     heatmap_rows = _heatmap(cur, year_str)
     streak_info = _streaks(heatmap_rows, target_year)
