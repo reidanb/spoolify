@@ -812,7 +812,7 @@ def health():
 
 
 @app.get("/users")
-def users():
+def users(current_user: str = Depends(get_current_user)):
     """List all users with imported data."""
     return {"users": list_users()}
 
