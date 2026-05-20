@@ -132,9 +132,8 @@
           <div class="action-row">
             <a class="action-link" href="/dashboard">View Stats</a>
             <a class="action-link" href="/wrapped" target="_blank" rel="noreferrer">View Wrapped</a>
-            <a class="action-link ghost-link" href="/docs" target="_blank" rel="noreferrer">Open API Docs</a>
           </div>
-          <button id="restart-btn" type="button">Run Another Import</button>
+          <button id="restart-btn" type="button" class="ghost">Run Another Import</button>
           <details class="help-toggle" style="margin-top: 0.4rem;">
             <summary>Optional: Set up Spotify sync (for near-real-time updates)</summary>
             <p style="margin: 0.65rem 0 0.5rem; color: #374154; line-height: 1.55;">Your imported archive is your historical foundation. If you want Spoolify to stay fresh by pulling recent plays from Spotify automatically, you will need a free Spotify Developer app. This is optional — archive import works fully without it.</p>
@@ -160,6 +159,6 @@ SPOTIFY_REDIRECT_URI=http://localhost:8888/callback</pre>
     </section>
   </main>
 
-  <script src="/frontend/app.js"></script>
+  <script src="/frontend/app.js?v=3"></script>
 </body>
 </html>
