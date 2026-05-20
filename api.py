@@ -614,10 +614,10 @@ def _extract_zip_json_files(upload: UploadFile) -> List[Path]:
 def _cleanup_staged_files(files: List[Path]) -> None:
     if not files:
         return
-    try:
-        shutil.rmtree(files[0].parent)
-    except Exception:
-        pass
+    # Files are staged as <tmpdir>/<idx>/<filename>; remove the whole tmpdir.
+    staged_dir = files[0].parent.parent
+    if "spoolify_zip_staged_" in staged_dir.name:
+        shutil.rmtree(staged_dir, ignore_errors=True)
 
 
 def _parse_ts(ts_value: Any) -> Optional[datetime]:
